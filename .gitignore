@@ -42,3 +42,21 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 build/
+
+# Replit workspace files
+.replit
+.replit-artifact/
+replit.md
+.local/
+node_modules/
+artifacts/
+lib/api-client-react/
+lib/api-spec/
+lib/api-zod/
+lib/db/
+scripts/
+package.json
+pnpm-lock.yaml
+pnpm-workspace.yaml
+tsconfig*.json
+.agents/
