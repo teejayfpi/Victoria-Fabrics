@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/providers/auth_provider.dart';
 import '../../core/theme/app_theme.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final authState = ref.watch(authStateProvider);
+    final user = authState.valueOrNull;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Profile'),
@@ -30,56 +35,84 @@ class ProfileScreen extends StatelessWidget {
               ),
               child: Column(
                 children: [
-                  CircleAvatar(
-                    radius: 50,
-                    backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
-                    child: const Icon(
-                      Icons.person,
-                      size: 50,
-                      color: AppTheme.primaryColor,
+                  // Avatar
+                  if (user?.photoURL != null)
+                    CircleAvatar(
+                      radius: 50,
+                      backgroundImage: NetworkImage(user!.photoURL!),
+                    )
+                  else
+                    CircleAvatar(
+                      radius: 50,
+                      backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
+                      child: const Icon(
+                        Icons.person,
+                        size: 50,
+                        color: AppTheme.primaryColor,
+                      ),
                     ),
-                  ),
                   const SizedBox(height: 16),
-                  const Text(
-                    'Guest User',
-                    style: TextStyle(
+
+                  // Name
+                  Text(
+                    user?.displayName ?? 'Guest User',
+                    style: const TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
                       color: AppTheme.textColor,
                     ),
                   ),
                   const SizedBox(height: 4),
+
+                  // Email or prompt
                   Text(
-                    'Sign in to access your account',
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                    ),
+                    user?.email ?? 'Sign in to access your account',
+                    style: TextStyle(color: Colors.grey[600]),
+                    textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () {
-                      // Demo mode - show login dialog
-                      showDialog(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                          title: const Text('Demo Mode'),
-                          content: const Text(
-                            'This is a demo app. In production, this would open a login screen.',
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(context),
-                              child: const Text('OK'),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primaryColor,
+
+                  // Sign-in / sign-out button
+                  if (user == null) ...[
+                    _GoogleSignInButton(
+                      onPressed: () async {
+                        try {
+                          await ref
+                              .read(authControllerProvider.notifier)
+                              .signInWithGoogle();
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Sign-in failed: $e'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        }
+                      },
                     ),
-                    child: const Text('Sign In'),
-                  ),
+                  ] else ...[
+                    OutlinedButton.icon(
+                      onPressed: () async {
+                        await ref
+                            .read(authControllerProvider.notifier)
+                            .signOut();
+                      },
+                      icon: const Icon(Icons.logout, color: Colors.red),
+                      label: const Text(
+                        'Sign Out',
+                        style: TextStyle(color: Colors.red),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Colors.red),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 10,
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -98,7 +131,8 @@ class ProfileScreen extends StatelessWidget {
               subtitle: 'Manage your addresses',
               onTap: () {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Demo mode - addresses not available')),
+                  const SnackBar(
+                      content: Text('Coming soon — delivery addresses')),
                 );
               },
             ),
@@ -108,7 +142,7 @@ class ProfileScreen extends StatelessWidget {
               subtitle: 'Your saved items',
               onTap: () {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Demo mode - wishlist not available')),
+                  const SnackBar(content: Text('Coming soon — wishlist')),
                 );
               },
             ),
@@ -118,7 +152,8 @@ class ProfileScreen extends StatelessWidget {
               subtitle: 'Manage notifications',
               onTap: () {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Demo mode - notifications not available')),
+                  const SnackBar(
+                      content: Text('Coming soon — notifications')),
                 );
               },
             ),
@@ -128,7 +163,8 @@ class ProfileScreen extends StatelessWidget {
               subtitle: 'Get help with your orders',
               onTap: () {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Demo mode - help not available')),
+                  const SnackBar(
+                      content: Text('Coming soon — help & support')),
                 );
               },
             ),
@@ -139,9 +175,10 @@ class ProfileScreen extends StatelessWidget {
               onTap: () {
                 showAboutDialog(
                   context: context,
-                  applicationName: 'Fabric Haven',
+                  applicationName: 'Victoria Fabrics',
                   applicationVersion: '1.0.0',
-                  applicationLegalese: '© 2024 Fabric Haven\nYour Neighbourhood Fabric Store',
+                  applicationLegalese:
+                      '© 2024 Victoria Fabrics\nYour Neighbourhood Fabric Store',
                   children: [
                     const SizedBox(height: 16),
                     const Text(
@@ -159,33 +196,93 @@ class ProfileScreen extends StatelessWidget {
                 Navigator.pushNamed(context, '/admin');
               },
             ),
-            const SizedBox(height: 24),
-
-            // Logout button (demo)
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Demo mode - logout not available')),
-                  );
-                },
-                icon: const Icon(Icons.logout, color: Colors.red),
-                label: const Text(
-                  'Sign Out',
-                  style: TextStyle(color: Colors.red),
-                ),
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: Colors.red),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                ),
-              ),
-            ),
           ],
         ),
       ),
     );
   }
+}
+
+/// Google-branded sign-in button
+class _GoogleSignInButton extends StatelessWidget {
+  final VoidCallback onPressed;
+
+  const _GoogleSignInButton({required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return OutlinedButton(
+      onPressed: onPressed,
+      style: OutlinedButton.styleFrom(
+        side: BorderSide(color: Colors.grey[300]!),
+        padding:
+            const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Google G logo colours
+          _GoogleLogo(),
+          const SizedBox(width: 12),
+          const Text(
+            'Sign in with Google',
+            style: TextStyle(
+              color: Colors.black87,
+              fontWeight: FontWeight.w600,
+              fontSize: 15,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GoogleLogo extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 22,
+      height: 22,
+      child: CustomPaint(painter: _GoogleLogoPainter()),
+    );
+  }
+}
+
+class _GoogleLogoPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2;
+
+    // Simple coloured circle segments to represent the Google G
+    final colors = [
+      const Color(0xFF4285F4),
+      const Color(0xFF34A853),
+      const Color(0xFFFBBC05),
+      const Color(0xFFEA4335),
+    ];
+
+    for (int i = 0; i < 4; i++) {
+      final paint = Paint()
+        ..color = colors[i]
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 4;
+      canvas.drawArc(
+        Rect.fromCircle(center: center, radius: radius - 2),
+        (i * 90 - 45) * 3.14159 / 180,
+        85 * 3.14159 / 180,
+        false,
+        paint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_GoogleLogoPainter oldDelegate) => false;
 }
 
 class _MenuItem extends StatelessWidget {
@@ -220,10 +317,7 @@ class _MenuItem extends StatelessWidget {
         ),
         subtitle: Text(
           subtitle,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey[600],
-          ),
+          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
         ),
         trailing: const Icon(Icons.chevron_right, color: Colors.grey),
         onTap: onTap,

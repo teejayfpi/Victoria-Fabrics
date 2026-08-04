@@ -1,13 +1,13 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/theme/app_theme.dart';
 import 'presentation/router/app_router.dart';
 import 'admin/router/admin_router.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  print('[Fabric Haven] Starting app...');
-  print('[Fabric Haven] Running in demo mode with mock data.');
+  await Firebase.initializeApp();
   runApp(const ProviderScope(child: FabricHavenApp()));
 }
 
@@ -17,7 +17,7 @@ class FabricHavenApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Fabric Haven',
+      title: 'Victoria Fabrics',
       theme: AppTheme.lightTheme,
       debugShowCheckedModeBanner: false,
       home: const AppRouter(),
@@ -35,7 +35,7 @@ class AdminRouterWrapper extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-      title: 'Fabric Haven Admin',
+      title: 'Victoria Fabrics Admin',
       theme: AppTheme.lightTheme,
       routerConfig: adminRouter,
       debugShowCheckedModeBanner: false,
@@ -50,7 +50,7 @@ class AppRouter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-      title: 'Fabric Haven',
+      title: 'Victoria Fabrics',
       theme: AppTheme.lightTheme,
       routerConfig: appRouter,
       debugShowCheckedModeBanner: false,
