@@ -7,76 +7,78 @@ import '../../core/theme/app_theme.dart';
 class MainShell extends ConsumerWidget {
   final Widget child;
 
-  const MainShell({
-    super.key,
-    required this.child,
-  });
+  const MainShell({super.key, required this.child});
 
-  int _calculateSelectedIndex(BuildContext context) {
-    final location = GoRouterState.of(context).uri.toString();
-    if (location.startsWith('/categories')) return 1;
-    if (location.startsWith('/cart')) return 2;
-    if (location.startsWith('/profile') || location.startsWith('/orders')) return 3;
+  int _selectedIndex(BuildContext context) {
+    final loc = GoRouterState.of(context).uri.toString();
+    if (loc.startsWith('/categories')) return 1;
+    if (loc.startsWith('/cart')) return 2;
+    if (loc.startsWith('/support')) return 3;
+    if (loc.startsWith('/profile') || loc.startsWith('/orders')) return 4;
     return 0;
   }
 
-  void _onItemTapped(BuildContext context, int index) {
+  void _onTap(BuildContext context, int index) {
     switch (index) {
       case 0:
         context.go('/');
-        break;
       case 1:
         context.go('/categories');
-        break;
       case 2:
         context.go('/cart');
-        break;
       case 3:
+        context.go('/support');
+      case 4:
         context.go('/profile');
-        break;
     }
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final cartItemCount = ref.watch(cartItemCountProvider);
-    final selectedIndex = _calculateSelectedIndex(context);
+    final cartCount = ref.watch(cartItemCountProvider);
+    final idx = _selectedIndex(context);
 
     return Scaffold(
       body: child,
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: selectedIndex,
-        onTap: (index) => _onItemTapped(context, index),
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: AppTheme.primaryColor,
-        unselectedItemColor: Colors.grey,
-        items: [
-          const BottomNavigationBarItem(
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: idx,
+        onDestinationSelected: (i) => _onTap(context, i),
+        backgroundColor: Colors.white,
+        indicatorColor: AppTheme.primaryColor.withOpacity(0.12),
+        destinations: [
+          const NavigationDestination(
             icon: Icon(Icons.home_outlined),
-            activeIcon: Icon(Icons.home),
+            selectedIcon: Icon(Icons.home, color: AppTheme.primaryColor),
             label: 'Home',
           ),
-          const BottomNavigationBarItem(
+          const NavigationDestination(
             icon: Icon(Icons.category_outlined),
-            activeIcon: Icon(Icons.category),
+            selectedIcon: Icon(Icons.category, color: AppTheme.primaryColor),
             label: 'Categories',
           ),
-          BottomNavigationBarItem(
+          NavigationDestination(
             icon: Badge(
-              isLabelVisible: cartItemCount > 0,
-              label: Text('$cartItemCount'),
+              isLabelVisible: cartCount > 0,
+              label: Text('$cartCount'),
               child: const Icon(Icons.shopping_cart_outlined),
             ),
-            activeIcon: Badge(
-              isLabelVisible: cartItemCount > 0,
-              label: Text('$cartItemCount'),
-              child: const Icon(Icons.shopping_cart),
+            selectedIcon: Badge(
+              isLabelVisible: cartCount > 0,
+              label: Text('$cartCount'),
+              child: const Icon(Icons.shopping_cart,
+                  color: AppTheme.primaryColor),
             ),
             label: 'Cart',
           ),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.person_outlined),
-            activeIcon: Icon(Icons.person),
+          const NavigationDestination(
+            icon: Icon(Icons.support_agent_outlined),
+            selectedIcon:
+                Icon(Icons.support_agent, color: AppTheme.primaryColor),
+            label: 'Support',
+          ),
+          const NavigationDestination(
+            icon: Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person, color: AppTheme.primaryColor),
             label: 'Profile',
           ),
         ],

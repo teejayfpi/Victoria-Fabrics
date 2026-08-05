@@ -1,16 +1,27 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:uuid/uuid.dart';
 import '../../core/theme/app_theme.dart';
 import '../../data/datasources/mock_data_source.dart';
+import '../../domain/entities/product.dart';
+import '../../services/firestore_service.dart';
+import '../../services/storage_service.dart';
 
 class AdminAddProductScreen extends ConsumerStatefulWidget {
+  /// Pass a full Product object (from the products list) when editing.
+  final Product? product;
+
+  /// Legacy: pass just the ID; screen will load from Firestore.
   final String? productId;
 
-  const AdminAddProductScreen({super.key, this.productId});
+  const AdminAddProductScreen({super.key, this.product, this.productId});
 
   @override
-  ConsumerState<AdminAddProductScreen> createState() => _AdminAddProductScreenState();
+  ConsumerState<AdminAddProductScreen> createState() =>
+      _AdminAddProductScreenState();
 }
 
 class _AdminAddProductScreenState extends ConsumerState<AdminAddProductScreen> {
@@ -20,35 +31,48 @@ class _AdminAddProductScreenState extends ConsumerState<AdminAddProductScreen> {
   final _pricePerYardController = TextEditingController();
   final _pricePerMeterController = TextEditingController();
   final _pricePerPieceController = TextEditingController();
-  final _imageUrlController = TextEditingController();
   final _colorsController = TextEditingController();
-  
+
   String? _selectedCategory;
   bool _inStock = true;
   bool _isLoading = false;
 
-  bool get isEditing => widget.productId != null;
+  // Images
+  final List<XFile> _newImages = []; // picked from device
+  List<String> _existingImageUrls = []; // already uploaded URLs
+
+  Product? _loadedProduct;
+  bool get isEditing => widget.product != null || widget.productId != null;
 
   @override
   void initState() {
     super.initState();
-    if (isEditing) {
-      _loadProduct();
+    if (widget.product != null) {
+      _prefillFrom(widget.product!);
+    } else if (widget.productId != null) {
+      _loadFromFirestore(widget.productId!);
     }
   }
 
-  void _loadProduct() {
-    final product = MockDataSource.getProductById(widget.productId!);
-    if (product != null) {
-      _nameController.text = product.name;
-      _descriptionController.text = product.description;
-      _pricePerYardController.text = product.pricePerYard.toString();
-      _pricePerMeterController.text = product.pricePerMeter.toString();
-      _pricePerPieceController.text = product.pricePerPiece.toString();
-      _imageUrlController.text = product.imageUrls.isNotEmpty ? product.imageUrls.first : '';
-      _colorsController.text = product.colors.join(', ');
-      _selectedCategory = product.categoryId;
-      _inStock = product.inStock;
+  void _prefillFrom(Product p) {
+    _loadedProduct = p;
+    _nameController.text = p.name;
+    _descriptionController.text = p.description;
+    _pricePerYardController.text = p.pricePerYard.toStringAsFixed(0);
+    _pricePerMeterController.text =
+        p.pricePerMeter > 0 ? p.pricePerMeter.toStringAsFixed(0) : '';
+    _pricePerPieceController.text =
+        p.pricePerPiece > 0 ? p.pricePerPiece.toStringAsFixed(0) : '';
+    _colorsController.text = p.colors.join(', ');
+    _selectedCategory = p.categoryId;
+    _inStock = p.inStock;
+    _existingImageUrls = List.from(p.imageUrls);
+  }
+
+  Future<void> _loadFromFirestore(String id) async {
+    final p = await FirestoreService.instance.getProductById(id);
+    if (p != null && mounted) {
+      setState(() => _prefillFrom(p));
     }
   }
 
@@ -59,10 +83,67 @@ class _AdminAddProductScreenState extends ConsumerState<AdminAddProductScreen> {
     _pricePerYardController.dispose();
     _pricePerMeterController.dispose();
     _pricePerPieceController.dispose();
-    _imageUrlController.dispose();
     _colorsController.dispose();
     super.dispose();
   }
+
+  // ─── Image picking ───────────────────────────────────────────────
+
+  Future<void> _pickImage(ImageSource source) async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(
+      source: source,
+      imageQuality: 75,
+      maxWidth: 1200,
+    );
+    if (picked != null) {
+      setState(() => _newImages.add(picked));
+    }
+  }
+
+  void _showImageSourceSheet() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 16),
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('Choose from Gallery'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _pickImage(ImageSource.gallery);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text('Take a Photo'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _pickImage(ImageSource.camera);
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ─── Save ────────────────────────────────────────────────────────
 
   Future<void> _saveProduct() async {
     if (!_formKey.currentState!.validate()) return;
@@ -72,23 +153,85 @@ class _AdminAddProductScreenState extends ConsumerState<AdminAddProductScreen> {
       );
       return;
     }
+    if (_existingImageUrls.isEmpty && _newImages.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please add at least one product image')),
+      );
+      return;
+    }
 
     setState(() => _isLoading = true);
 
-    // Simulate API call
-    await Future.delayed(const Duration(seconds: 1));
+    try {
+      final productId = _loadedProduct?.id ?? const Uuid().v4();
 
-    setState(() => _isLoading = false);
+      // Upload new images to Firebase Storage
+      final uploadedUrls = <String>[];
+      for (final img in _newImages) {
+        final url = await StorageService.instance
+            .uploadProductImage(File(img.path), productId);
+        uploadedUrls.add(url);
+      }
 
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(isEditing ? 'Product updated successfully' : 'Product added successfully'),
-        ),
+      final allImageUrls = [..._existingImageUrls, ...uploadedUrls];
+
+      final category = MockDataSource.categories
+          .firstWhere((c) => c.id == _selectedCategory!);
+
+      final product = Product(
+        id: productId,
+        name: _nameController.text.trim(),
+        description: _descriptionController.text.trim(),
+        categoryId: _selectedCategory!,
+        categoryName: category.name,
+        imageUrls: allImageUrls,
+        pricePerYard:
+            double.tryParse(_pricePerYardController.text) ?? 0,
+        pricePerMeter:
+            double.tryParse(_pricePerMeterController.text) ?? 0,
+        pricePerPiece:
+            double.tryParse(_pricePerPieceController.text) ?? 0,
+        inStock: _inStock,
+        colors: _colorsController.text
+            .split(',')
+            .map((c) => c.trim())
+            .where((c) => c.isNotEmpty)
+            .toList(),
+        availableUnits: const ['Yard', 'Meter', 'Piece'],
       );
-      context.pop();
+
+      if (isEditing) {
+        await FirestoreService.instance.updateProduct(product);
+      } else {
+        await FirestoreService.instance.addProduct(product);
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(isEditing
+                ? 'Product updated successfully!'
+                : 'Product added — customers can now see it!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        context.pop();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
+
+  // ─── Build ───────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -103,69 +246,74 @@ class _AdminAddProductScreenState extends ConsumerState<AdminAddProductScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Product name
+              // ── Product Images ──
+              const Text('Product Images',
+                  style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.textColor)),
+              const SizedBox(height: 4),
+              const Text(
+                'Add clear photos of the fabric. Customers see these on the product page.',
+                style: TextStyle(color: Colors.grey, fontSize: 12),
+              ),
+              const SizedBox(height: 12),
+              _buildImageGrid(),
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: _isLoading ? null : _showImageSourceSheet,
+                icon: const Icon(Icons.add_photo_alternate),
+                label: const Text('Add Image'),
+              ),
+              const SizedBox(height: 24),
+
+              // ── Product Name ──
               TextFormField(
                 controller: _nameController,
                 decoration: const InputDecoration(
                   labelText: 'Product Name *',
-                  hintText: 'Enter product name',
+                  hintText: 'e.g. Royal Ankara Print',
                 ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter product name';
-                  }
-                  return null;
-                },
+                validator: (v) =>
+                    (v == null || v.trim().isEmpty) ? 'Enter product name' : null,
               ),
               const SizedBox(height: 16),
 
-              // Category
+              // ── Category ──
               DropdownButtonFormField<String>(
                 value: _selectedCategory,
-                decoration: const InputDecoration(
-                  labelText: 'Category *',
-                ),
-                items: MockDataSource.categories.map((cat) => DropdownMenuItem(
-                  value: cat.id,
-                  child: Text(cat.name),
-                )).toList(),
-                onChanged: (value) => setState(() => _selectedCategory = value),
-                validator: (value) {
-                  if (value == null) {
-                    return 'Please select a category';
-                  }
-                  return null;
-                },
+                decoration: const InputDecoration(labelText: 'Category *'),
+                items: MockDataSource.categories
+                    .map((cat) => DropdownMenuItem(
+                          value: cat.id,
+                          child: Text(cat.name),
+                        ))
+                    .toList(),
+                onChanged: (v) => setState(() => _selectedCategory = v),
+                validator: (v) => v == null ? 'Select a category' : null,
               ),
               const SizedBox(height: 16),
 
-              // Description
+              // ── Description ──
               TextFormField(
                 controller: _descriptionController,
                 decoration: const InputDecoration(
                   labelText: 'Description *',
-                  hintText: 'Enter product description',
+                  hintText: 'Describe the fabric, pattern, and ideal uses...',
                   alignLabelWithHint: true,
                 ),
                 maxLines: 4,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter description';
-                  }
-                  return null;
-                },
+                validator: (v) =>
+                    (v == null || v.trim().isEmpty) ? 'Enter description' : null,
               ),
               const SizedBox(height: 24),
 
-              // Pricing section
-              const Text(
-                'Pricing',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.textColor,
-                ),
-              ),
+              // ── Pricing ──
+              const Text('Pricing',
+                  style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.textColor)),
               const SizedBox(height: 12),
               Row(
                 children: [
@@ -173,17 +321,13 @@ class _AdminAddProductScreenState extends ConsumerState<AdminAddProductScreen> {
                     child: TextFormField(
                       controller: _pricePerYardController,
                       decoration: const InputDecoration(
-                        labelText: 'Price per Yard *',
+                        labelText: 'Per Yard *',
                         prefixText: '₦ ',
                       ),
                       keyboardType: TextInputType.number,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Required';
-                        }
-                        if (double.tryParse(value) == null) {
-                          return 'Invalid number';
-                        }
+                      validator: (v) {
+                        if (v == null || v.isEmpty) return 'Required';
+                        if (double.tryParse(v) == null) return 'Invalid';
                         return null;
                       },
                     ),
@@ -193,7 +337,7 @@ class _AdminAddProductScreenState extends ConsumerState<AdminAddProductScreen> {
                     child: TextFormField(
                       controller: _pricePerMeterController,
                       decoration: const InputDecoration(
-                        labelText: 'Price per Meter',
+                        labelText: 'Per Meter',
                         prefixText: '₦ ',
                       ),
                       keyboardType: TextInputType.number,
@@ -202,83 +346,52 @@ class _AdminAddProductScreenState extends ConsumerState<AdminAddProductScreen> {
                 ],
               ),
               const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: _pricePerPieceController,
-                      decoration: const InputDecoration(
-                        labelText: 'Price per Piece',
-                        prefixText: '₦ ',
-                      ),
-                      keyboardType: TextInputType.number,
-                    ),
+              SizedBox(
+                width: MediaQuery.of(context).size.width / 2 - 22,
+                child: TextFormField(
+                  controller: _pricePerPieceController,
+                  decoration: const InputDecoration(
+                    labelText: 'Per Piece',
+                    prefixText: '₦ ',
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(child: Container()),
-                ],
+                  keyboardType: TextInputType.number,
+                ),
               ),
               const SizedBox(height: 24),
 
-              // Images section
-              const Text(
-                'Images',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.textColor,
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _imageUrlController,
-                decoration: const InputDecoration(
-                  labelText: 'Image URL',
-                  hintText: 'https://example.com/image.jpg',
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Enter the URL of the product image',
-                style: TextStyle(color: Colors.grey[600], fontSize: 12),
-              ),
-              const SizedBox(height: 24),
-
-              // Colors section
-              const Text(
-                'Available Colors',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.textColor,
-                ),
-              ),
+              // ── Colors ──
+              const Text('Available Colors',
+                  style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.textColor)),
               const SizedBox(height: 12),
               TextFormField(
                 controller: _colorsController,
                 decoration: const InputDecoration(
                   labelText: 'Colors',
-                  hintText: 'Red, Blue, Green',
+                  hintText: 'Red & Gold, Blue & White, Green',
                 ),
               ),
-              const SizedBox(height: 8),
-              Text(
-                'Separate colors with commas',
-                style: TextStyle(color: Colors.grey[600], fontSize: 12),
-              ),
+              const SizedBox(height: 4),
+              Text('Separate colors with commas',
+                  style: TextStyle(color: Colors.grey[600], fontSize: 12)),
               const SizedBox(height: 24),
 
-              // Stock status
+              // ── Stock ──
               SwitchListTile(
                 title: const Text('In Stock'),
-                subtitle: Text(_inStock ? 'Product is available for purchase' : 'Product is out of stock'),
+                subtitle: Text(_inStock
+                    ? 'Available for customers to buy'
+                    : 'Hidden from customers'),
                 value: _inStock,
-                onChanged: (value) => setState(() => _inStock = value),
+                onChanged: (v) => setState(() => _inStock = v),
                 contentPadding: EdgeInsets.zero,
+                activeColor: AppTheme.primaryColor,
               ),
               const SizedBox(height: 32),
 
-              // Submit button
+              // ── Submit ──
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -292,20 +405,123 @@ class _AdminAddProductScreenState extends ConsumerState<AdminAddProductScreen> {
                           width: 20,
                           height: 20,
                           child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
+                              strokeWidth: 2, color: Colors.white),
                         )
                       : Text(
-                          isEditing ? 'Update Product' : 'Add Product',
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          isEditing ? 'Update Product' : 'Add Product to Store',
+                          style: const TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.bold),
                         ),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 24),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildImageGrid() {
+    final totalImages = _existingImageUrls.length + _newImages.length;
+    if (totalImages == 0) {
+      return Container(
+        height: 120,
+        decoration: BoxDecoration(
+          color: Colors.grey[100],
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey[300]!),
+        ),
+        child: const Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.image_outlined, size: 40, color: Colors.grey),
+              SizedBox(height: 8),
+              Text('No images yet', style: TextStyle(color: Colors.grey)),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return SizedBox(
+      height: 110,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        children: [
+          // Existing uploaded images
+          ..._existingImageUrls.asMap().entries.map((entry) {
+            return _ImageTile(
+              child: Image.network(entry.value, fit: BoxFit.cover),
+              onRemove: () =>
+                  setState(() => _existingImageUrls.removeAt(entry.key)),
+            );
+          }),
+          // Newly picked images (not yet uploaded)
+          ..._newImages.asMap().entries.map((entry) {
+            return _ImageTile(
+              child: Image.file(File(entry.value.path), fit: BoxFit.cover),
+              onRemove: () => setState(() => _newImages.removeAt(entry.key)),
+              badge: const Icon(Icons.upload, size: 16, color: Colors.white),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+}
+
+class _ImageTile extends StatelessWidget {
+  final Widget child;
+  final VoidCallback onRemove;
+  final Widget? badge;
+
+  const _ImageTile(
+      {required this.child, required this.onRemove, this.badge});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 100,
+      height: 100,
+      margin: const EdgeInsets.only(right: 8),
+      child: Stack(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: SizedBox.expand(child: child),
+          ),
+          if (badge != null)
+            Positioned(
+              bottom: 4,
+              left: 4,
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: badge,
+              ),
+            ),
+          Positioned(
+            top: 4,
+            right: 4,
+            child: GestureDetector(
+              onTap: onRemove,
+              child: Container(
+                padding: const EdgeInsets.all(2),
+                decoration: const BoxDecoration(
+                  color: Colors.red,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.close,
+                    size: 14, color: Colors.white),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

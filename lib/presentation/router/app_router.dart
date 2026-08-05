@@ -10,6 +10,7 @@ import '../screens/order_confirmation_screen.dart';
 import '../screens/orders_screen.dart';
 import '../screens/profile_screen.dart';
 import '../screens/search_screen.dart';
+import '../screens/support_ticket_screen.dart';
 import '../screens/main_shell.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -25,43 +26,44 @@ final appRouter = GoRouter(
       routes: [
         GoRoute(
           path: '/',
-          pageBuilder: (context, state) => const NoTransitionPage(
-            child: HomeScreen(),
-          ),
+          pageBuilder: (context, state) =>
+              const NoTransitionPage(child: HomeScreen()),
         ),
         GoRoute(
           path: '/categories',
-          pageBuilder: (context, state) => const NoTransitionPage(
-            child: CategoriesScreen(),
-          ),
+          pageBuilder: (context, state) =>
+              const NoTransitionPage(child: CategoriesScreen()),
+        ),
+        GoRoute(
+          path: '/cart',
+          pageBuilder: (context, state) =>
+              const NoTransitionPage(child: CartScreen()),
+        ),
+        GoRoute(
+          path: '/support',
+          pageBuilder: (context, state) =>
+              const NoTransitionPage(child: SupportTicketScreen()),
         ),
         GoRoute(
           path: '/profile',
-          pageBuilder: (context, state) => const NoTransitionPage(
-            child: ProfileScreen(),
-          ),
+          pageBuilder: (context, state) =>
+              const NoTransitionPage(child: ProfileScreen()),
         ),
       ],
     ),
     GoRoute(
       path: '/category/:id',
-      builder: (context, state) => CategoryProductsScreen(
-        categoryId: state.pathParameters['id']!,
-      ),
+      builder: (context, state) =>
+          CategoryProductsScreen(categoryId: state.pathParameters['id']!),
     ),
     GoRoute(
       path: '/product/:id',
-      builder: (context, state) => ProductDetailScreen(
-        productId: state.pathParameters['id']!,
-      ),
+      builder: (context, state) =>
+          ProductDetailScreen(productId: state.pathParameters['id']!),
     ),
     GoRoute(
       path: '/search',
       builder: (context, state) => const SearchScreen(),
-    ),
-    GoRoute(
-      path: '/cart',
-      builder: (context, state) => const CartScreen(),
     ),
     GoRoute(
       path: '/checkout',

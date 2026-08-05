@@ -33,17 +33,12 @@ class AdminDashboardScreen extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      admin?.name ?? 'Admin',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    Text(
-                      admin?.email ?? '',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[600],
-                      ),
-                    ),
+                    Text(admin?.name ?? 'Admin',
+                        style:
+                            const TextStyle(fontWeight: FontWeight.bold)),
+                    Text(admin?.email ?? '',
+                        style: TextStyle(
+                            fontSize: 12, color: Colors.grey[600])),
                   ],
                 ),
               ),
@@ -54,7 +49,8 @@ class AdminDashboardScreen extends ConsumerWidget {
                   children: [
                     Icon(Icons.logout, color: Colors.red, size: 20),
                     SizedBox(width: 8),
-                    Text('Logout', style: TextStyle(color: Colors.red)),
+                    Text('Logout',
+                        style: TextStyle(color: Colors.red)),
                   ],
                 ),
               ),
@@ -88,14 +84,13 @@ class AdminDashboardScreen extends ConsumerWidget {
                   Text(
                     'Welcome back, ${admin?.name ?? 'Admin'}!',
                     style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 6),
                   const Text(
-                    'Here\'s what\'s happening with Victoria Fabrics today.',
+                    "Here's what's happening with Victoria Fabrics today.",
                     style: TextStyle(color: Colors.white70),
                   ),
                 ],
@@ -103,15 +98,12 @@ class AdminDashboardScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 24),
 
-            // Stats cards
-            const Text(
-              'Overview',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.textColor,
-              ),
-            ),
+            // Stats
+            const Text('Overview',
+                style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textColor)),
             const SizedBox(height: 12),
             GridView.count(
               shrinkWrap: true,
@@ -122,42 +114,35 @@ class AdminDashboardScreen extends ConsumerWidget {
               childAspectRatio: 1.3,
               children: const [
                 _StatCard(
-                  title: 'Total Products',
-                  value: '12',
-                  icon: Icons.inventory_2,
-                  color: Colors.blue,
-                ),
+                    title: 'Total Products',
+                    value: 'Live',
+                    icon: Icons.inventory_2,
+                    color: Colors.blue),
                 _StatCard(
-                  title: 'Pending Orders',
-                  value: '5',
-                  icon: Icons.pending_actions,
-                  color: Colors.orange,
-                ),
+                    title: 'Pending Orders',
+                    value: 'Live',
+                    icon: Icons.pending_actions,
+                    color: Colors.orange),
                 _StatCard(
-                  title: 'Today\'s Sales',
-                  value: '₦125,000',
-                  icon: Icons.trending_up,
-                  color: Colors.green,
-                ),
+                    title: 'Today\'s Sales',
+                    value: 'Live',
+                    icon: Icons.trending_up,
+                    color: Colors.green),
                 _StatCard(
-                  title: 'Total Customers',
-                  value: '48',
-                  icon: Icons.people,
-                  color: Colors.purple,
-                ),
+                    title: 'Open Tickets',
+                    value: 'Live',
+                    icon: Icons.confirmation_number,
+                    color: Colors.purple),
               ],
             ),
             const SizedBox(height: 24),
 
             // Quick actions
-            const Text(
-              'Quick Actions',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.textColor,
-              ),
-            ),
+            const Text('Quick Actions',
+                style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textColor)),
             const SizedBox(height: 12),
             Row(
               children: [
@@ -165,7 +150,9 @@ class AdminDashboardScreen extends ConsumerWidget {
                   child: _QuickActionCard(
                     icon: Icons.add_circle,
                     title: 'Add Product',
-                    onTap: () => context.push('/admin/products/add'),
+                    color: Colors.blue,
+                    onTap: () =>
+                        context.push('/admin/products/add'),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -173,6 +160,7 @@ class AdminDashboardScreen extends ConsumerWidget {
                   child: _QuickActionCard(
                     icon: Icons.receipt_long,
                     title: 'View Orders',
+                    color: Colors.orange,
                     onTap: () => context.push('/admin/orders'),
                   ),
                 ),
@@ -183,9 +171,10 @@ class AdminDashboardScreen extends ConsumerWidget {
               children: [
                 Expanded(
                   child: _QuickActionCard(
-                    icon: Icons.category,
-                    title: 'Categories',
-                    onTap: () => context.push('/admin/categories'),
+                    icon: Icons.confirmation_number,
+                    title: 'Tickets',
+                    color: Colors.purple,
+                    onTap: () => context.push('/admin/tickets'),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -193,22 +182,21 @@ class AdminDashboardScreen extends ConsumerWidget {
                   child: _QuickActionCard(
                     icon: Icons.analytics,
                     title: 'Analytics',
-                    onTap: () => context.push('/admin/analytics'),
+                    color: Colors.green,
+                    onTap: () =>
+                        context.push('/admin/analytics'),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 24),
 
-            // Recent orders
-            const Text(
-              'Recent Orders',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.textColor,
-              ),
-            ),
+            // Recent orders placeholder
+            const Text('Recent Orders',
+                style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textColor)),
             const SizedBox(height: 12),
             _RecentOrdersList(),
           ],
@@ -221,39 +209,35 @@ class AdminDashboardScreen extends ConsumerWidget {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => Container(
+          borderRadius:
+              BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => Container(
         padding: const EdgeInsets.all(16),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Notifications',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            const Text('Notifications',
+                style: TextStyle(
+                    fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
             ListTile(
               leading: const CircleAvatar(
                 backgroundColor: Colors.orange,
-                child:
-                    Icon(Icons.notifications, color: Colors.white, size: 20),
+                child: Icon(Icons.notifications,
+                    color: Colors.white, size: 20),
               ),
-              title: const Text('New Order #A1B2C3'),
+              title: const Text('New Order received'),
               subtitle: const Text('2 minutes ago'),
-              trailing: const Text('₦45,000'),
             ),
             ListTile(
               leading: const CircleAvatar(
-                backgroundColor: Colors.blue,
-                child: Icon(Icons.inventory, color: Colors.white, size: 20),
+                backgroundColor: Colors.purple,
+                child: Icon(Icons.confirmation_number,
+                    color: Colors.white, size: 20),
               ),
-              title: const Text('Low stock alert'),
-              subtitle: const Text('Royal Ankara Print — 3 left'),
+              title: const Text('New support ticket'),
+              subtitle: const Text('15 minutes ago'),
             ),
             const SizedBox(height: 16),
           ],
@@ -294,28 +278,21 @@ class _StatCard extends StatelessWidget {
                     color: color.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(icon, color: color, size: 24),
+                  child: Icon(icon, color: color, size: 22),
                 ),
-                const Icon(Icons.trending_up, color: Colors.green, size: 16),
+                const Icon(Icons.circle,
+                    size: 8, color: Colors.green),
               ],
             ),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  value,
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Text(
-                  title,
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 12,
-                  ),
-                ),
+                Text(value,
+                    style: const TextStyle(
+                        fontSize: 18, fontWeight: FontWeight.bold)),
+                Text(title,
+                    style: TextStyle(
+                        color: Colors.grey[600], fontSize: 12)),
               ],
             ),
           ],
@@ -328,11 +305,13 @@ class _StatCard extends StatelessWidget {
 class _QuickActionCard extends StatelessWidget {
   final IconData icon;
   final String title;
+  final Color color;
   final VoidCallback onTap;
 
   const _QuickActionCard({
     required this.icon,
     required this.title,
+    required this.color,
     required this.onTap,
   });
 
@@ -343,22 +322,21 @@ class _QuickActionCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(18),
           child: Column(
             children: [
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: AppTheme.primaryColor.withOpacity(0.1),
+                  color: color.withOpacity(0.1),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(icon, color: AppTheme.primaryColor, size: 28),
+                child: Icon(icon, color: color, size: 26),
               ),
-              const SizedBox(height: 12),
-              Text(
-                title,
-                style: const TextStyle(fontWeight: FontWeight.w600),
-              ),
+              const SizedBox(height: 10),
+              Text(title,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                  textAlign: TextAlign.center),
             ],
           ),
         ),
@@ -374,27 +352,33 @@ class _RecentOrdersList extends StatelessWidget {
       child: Column(
         children: [
           _OrderTile(
-            orderId: '#A1B2C3',
-            customer: 'Adebayo Johnson',
-            amount: '₦45,000',
-            status: 'Pending',
-            statusColor: Colors.orange,
-          ),
+              orderId: 'ORD-001',
+              customer: 'Adebayo Johnson',
+              amount: '₦125,000',
+              status: 'Pending',
+              statusColor: Colors.orange),
           const Divider(height: 1),
           _OrderTile(
-            orderId: '#D4E5F6',
-            customer: 'Chioma Adekunle',
-            amount: '₦78,500',
-            status: 'Preparing',
-            statusColor: Colors.blue,
-          ),
+              orderId: 'ORD-002',
+              customer: 'Chioma Adekunle',
+              amount: '₦245,000',
+              status: 'Confirmed',
+              statusColor: Colors.blue),
           const Divider(height: 1),
           _OrderTile(
-            orderId: '#G7H8I9',
-            customer: 'Emmanuel Obi',
-            amount: '₦32,000',
-            status: 'Delivered',
-            statusColor: Colors.green,
+              orderId: 'ORD-003',
+              customer: 'Emmanuel Obi',
+              amount: '₦45,000',
+              status: 'Delivered',
+              statusColor: Colors.green),
+          const Divider(height: 1),
+          ListTile(
+            onTap: () => context.push('/admin/orders'),
+            title: const Text('View all orders →',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                    color: AppTheme.primaryColor,
+                    fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -422,15 +406,18 @@ class _OrderTile extends StatelessWidget {
     return ListTile(
       leading: CircleAvatar(
         backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
-        child: const Icon(Icons.receipt, color: AppTheme.primaryColor, size: 20),
+        child: const Icon(Icons.receipt,
+            color: AppTheme.primaryColor, size: 18),
       ),
-      title: Text(orderId, style: const TextStyle(fontWeight: FontWeight.w600)),
+      title: Text(orderId,
+          style: const TextStyle(fontWeight: FontWeight.w600)),
       subtitle: Text(customer),
       trailing: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          Text(amount, style: const TextStyle(fontWeight: FontWeight.bold)),
+          Text(amount,
+              style: const TextStyle(fontWeight: FontWeight.bold)),
           Container(
             padding:
                 const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -438,13 +425,11 @@ class _OrderTile extends StatelessWidget {
               color: statusColor.withOpacity(0.1),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Text(
-              status,
-              style: TextStyle(
-                  color: statusColor,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600),
-            ),
+            child: Text(status,
+                style: TextStyle(
+                    color: statusColor,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600)),
           ),
         ],
       ),

@@ -9,10 +9,11 @@ import '../screens/admin_add_product_screen.dart';
 import '../screens/admin_orders_screen.dart';
 import '../screens/admin_categories_screen.dart';
 import '../screens/admin_analytics_screen.dart';
+import '../screens/admin_tickets_screen.dart';
+import '../../domain/entities/product.dart';
 
 final _adminNavigatorKey = GlobalKey<NavigatorState>();
 
-// Keep a reference to the provider container so the router redirect can read state
 ProviderContainer? _adminContainer;
 
 void setAdminContainer(ProviderContainer container) {
@@ -23,15 +24,11 @@ final adminRouter = GoRouter(
   navigatorKey: _adminNavigatorKey,
   initialLocation: '/admin/login',
   redirect: (context, state) {
-    final isLoggedIn = _adminContainer?.read(isAdminLoggedInProvider) ?? false;
+    final isLoggedIn =
+        _adminContainer?.read(isAdminLoggedInProvider) ?? false;
     final isLoginRoute = state.matchedLocation == '/admin/login';
-
-    if (!isLoggedIn && !isLoginRoute) {
-      return '/admin/login';
-    }
-    if (isLoggedIn && isLoginRoute) {
-      return '/admin';
-    }
+    if (!isLoggedIn && !isLoginRoute) return '/admin/login';
+    if (isLoggedIn && isLoginRoute) return '/admin';
     return null;
   },
   routes: [
@@ -49,19 +46,21 @@ final adminRouter = GoRouter(
           routes: [
             GoRoute(
               path: 'add',
-              builder: (context, state) => const AdminAddProductScreen(),
+              builder: (context, state) =>
+                  const AdminAddProductScreen(),
             ),
             GoRoute(
               path: 'edit/:id',
-              builder: (context, state) => AdminAddProductScreen(
-                productId: state.pathParameters['id'],
-              ),
-            ),
-            GoRoute(
-              path: ':id',
-              builder: (context, state) => AdminAddProductScreen(
-                productId: state.pathParameters['id'],
-              ),
+              builder: (context, state) {
+                // Prefer the full Product passed as extra; fall back to ID
+                final product = state.extra as Product?;
+                return AdminAddProductScreen(
+                  product: product,
+                  productId: product == null
+                      ? state.pathParameters['id']
+                      : null,
+                );
+              },
             ),
           ],
         ),
@@ -72,18 +71,24 @@ final adminRouter = GoRouter(
             GoRoute(
               path: ':id',
               builder: (context, state) => _OrderDetailScreen(
-                orderId: state.pathParameters['id']!,
-              ),
+                  orderId: state.pathParameters['id']!),
             ),
           ],
         ),
         GoRoute(
           path: 'categories',
-          builder: (context, state) => const AdminCategoriesScreen(),
+          builder: (context, state) =>
+              const AdminCategoriesScreen(),
         ),
         GoRoute(
           path: 'analytics',
-          builder: (context, state) => const AdminAnalyticsScreen(),
+          builder: (context, state) =>
+              const AdminAnalyticsScreen(),
+        ),
+        GoRoute(
+          path: 'tickets',
+          builder: (context, state) =>
+              const AdminTicketsScreen(),
         ),
       ],
     ),
@@ -92,7 +97,6 @@ final adminRouter = GoRouter(
 
 class _OrderDetailScreen extends StatelessWidget {
   final String orderId;
-
   const _OrderDetailScreen({required this.orderId});
 
   @override
@@ -113,16 +117,12 @@ class _OrderDetailScreen extends StatelessWidget {
                   size: 64, color: Colors.grey),
             ),
             const SizedBox(height: 24),
-            Text(
-              'Order $orderId',
-              style: const TextStyle(
-                  fontSize: 22, fontWeight: FontWeight.bold),
-            ),
+            Text('Order $orderId',
+                style: const TextStyle(
+                    fontSize: 22, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            const Text(
-              'Full order detail view coming soon.',
-              style: TextStyle(color: Colors.grey),
-            ),
+            const Text('Full order detail view coming soon.',
+                style: TextStyle(color: Colors.grey)),
             const SizedBox(height: 24),
             OutlinedButton.icon(
               onPressed: () => context.pop(),
