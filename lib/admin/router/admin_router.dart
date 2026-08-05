@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/admin_auth_provider.dart';
 import '../screens/admin_login_screen.dart';
@@ -9,13 +10,28 @@ import '../screens/admin_orders_screen.dart';
 import '../screens/admin_categories_screen.dart';
 import '../screens/admin_analytics_screen.dart';
 
+final _adminNavigatorKey = GlobalKey<NavigatorState>();
+
+// Keep a reference to the provider container so the router redirect can read state
+ProviderContainer? _adminContainer;
+
+void setAdminContainer(ProviderContainer container) {
+  _adminContainer = container;
+}
+
 final adminRouter = GoRouter(
-  initialLocation: '/admin',
+  navigatorKey: _adminNavigatorKey,
+  initialLocation: '/admin/login',
   redirect: (context, state) {
-    final isLoggedIn = state.uri.toString() == '/admin/login';
-    final authToken = ''; // Would check adminAuthProvider here
-    
-    // For demo mode, allow access to all admin routes
+    final isLoggedIn = _adminContainer?.read(isAdminLoggedInProvider) ?? false;
+    final isLoginRoute = state.matchedLocation == '/admin/login';
+
+    if (!isLoggedIn && !isLoginRoute) {
+      return '/admin/login';
+    }
+    if (isLoggedIn && isLoginRoute) {
+      return '/admin';
+    }
     return null;
   },
   routes: [
@@ -55,7 +71,7 @@ final adminRouter = GoRouter(
           routes: [
             GoRoute(
               path: ':id',
-              builder: (context, state) => _OrderDetailPlaceholder(
+              builder: (context, state) => _OrderDetailScreen(
                 orderId: state.pathParameters['id']!,
               ),
             ),
@@ -74,10 +90,10 @@ final adminRouter = GoRouter(
   ],
 );
 
-class _OrderDetailPlaceholder extends StatelessWidget {
+class _OrderDetailScreen extends StatelessWidget {
   final String orderId;
 
-  const _OrderDetailPlaceholder({required this.orderId});
+  const _OrderDetailScreen({required this.orderId});
 
   @override
   Widget build(BuildContext context) {
@@ -87,11 +103,32 @@ class _OrderDetailPlaceholder extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.receipt, size: 80, color: Colors.grey),
-            const SizedBox(height: 16),
-            Text('Order Details: $orderId'),
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.receipt_long,
+                  size: 64, color: Colors.grey),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Order $orderId',
+              style: const TextStyle(
+                  fontSize: 22, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 8),
-            const Text('Demo mode - full details would be shown here'),
+            const Text(
+              'Full order detail view coming soon.',
+              style: TextStyle(color: Colors.grey),
+            ),
+            const SizedBox(height: 24),
+            OutlinedButton.icon(
+              onPressed: () => context.pop(),
+              icon: const Icon(Icons.arrow_back),
+              label: const Text('Back to Orders'),
+            ),
           ],
         ),
       ),

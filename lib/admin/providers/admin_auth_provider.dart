@@ -16,33 +16,26 @@ class AdminUser {
   });
 }
 
-class AdminAuthNotifier extends StateNotifier<AdminUser?> {
-  AdminAuthNotifier() : super(null) {
-    _initDemoAdmin();
-  }
+// Admin credentials — change these to your preferred credentials
+const String _adminEmail = 'admin@victoriafabrics.com';
+const String _adminPassword = 'Victoria@2024';
 
-  void _initDemoAdmin() {
-    // Demo mode - simulate logged in admin
-    state = AdminUser(
-      id: 'admin_001',
-      email: 'admin@fabrichaven.com',
-      name: 'Store Admin',
-      role: 'super_admin',
-      createdAt: DateTime.now(),
-    );
-  }
+class AdminAuthNotifier extends StateNotifier<AdminUser?> {
+  AdminAuthNotifier() : super(null);
 
   Future<bool> login(String email, String password) async {
-    // Demo mode - accept any credentials
-    if (email.isNotEmpty && password.isNotEmpty) {
+    // Simulate a brief network call
+    await Future.delayed(const Duration(milliseconds: 500));
+
+    if (email.trim().toLowerCase() == _adminEmail &&
+        password == _adminPassword) {
       state = AdminUser(
-        id: 'admin_${DateTime.now().millisecondsSinceEpoch}',
+        id: 'admin_001',
         email: email,
-        name: email.split('@').first,
-        role: 'admin',
+        name: 'Store Admin',
+        role: 'super_admin',
         createdAt: DateTime.now(),
       );
-      print('[Admin] Logged in as: $email');
       return true;
     }
     return false;
@@ -50,11 +43,11 @@ class AdminAuthNotifier extends StateNotifier<AdminUser?> {
 
   void logout() {
     state = null;
-    print('[Admin] Logged out');
   }
 }
 
-final adminAuthProvider = StateNotifierProvider<AdminAuthNotifier, AdminUser?>((ref) {
+final adminAuthProvider =
+    StateNotifierProvider<AdminAuthNotifier, AdminUser?>((ref) {
   return AdminAuthNotifier();
 });
 

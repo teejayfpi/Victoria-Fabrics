@@ -31,9 +31,9 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
     setState(() => _isLoading = true);
 
     final success = await ref.read(adminAuthProvider.notifier).login(
-      _emailController.text,
-      _passwordController.text,
-    );
+          _emailController.text.trim(),
+          _passwordController.text,
+        );
 
     setState(() => _isLoading = false);
 
@@ -42,7 +42,7 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Invalid credentials. Please try again.'),
+          content: Text('Invalid credentials. Please check your email and password.'),
           backgroundColor: Colors.red,
         ),
       );
@@ -52,6 +52,7 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppTheme.backgroundColor,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -69,18 +70,25 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
                     height: 100,
                     decoration: BoxDecoration(
                       color: AppTheme.primaryColor,
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppTheme.primaryColor.withOpacity(0.3),
+                          blurRadius: 20,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
                     ),
                     child: const Icon(
-                      Icons.store,
-                      size: 60,
+                      Icons.storefront,
+                      size: 56,
                       color: Colors.white,
                     ),
                   ),
                 ),
                 const SizedBox(height: 24),
                 const Text(
-                  'Fabric Haven',
+                  'Victoria Fabrics',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 28,
@@ -103,13 +111,14 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
                 TextFormField(
                   controller: _emailController,
                   decoration: const InputDecoration(
-                    labelText: 'Email',
+                    labelText: 'Admin Email',
                     prefixIcon: Icon(Icons.email_outlined),
                   ),
                   keyboardType: TextInputType.emailAddress,
                   textInputAction: TextInputAction.next,
+                  autofillHints: const [AutofillHints.username],
                   validator: (value) {
-                    if (value == null || value.isEmpty) {
+                    if (value == null || value.trim().isEmpty) {
                       return 'Please enter your email';
                     }
                     if (!value.contains('@')) {
@@ -128,13 +137,17 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
                     prefixIcon: const Icon(Icons.lock_outlined),
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                        _obscurePassword
+                            ? Icons.visibility_off
+                            : Icons.visibility,
                       ),
-                      onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                      onPressed: () =>
+                          setState(() => _obscurePassword = !_obscurePassword),
                     ),
                   ),
                   obscureText: _obscurePassword,
                   textInputAction: TextInputAction.done,
+                  autofillHints: const [AutofillHints.password],
                   onFieldSubmitted: (_) => _login(),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -146,21 +159,7 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 8),
-
-                // Forgot password
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Password reset not available in demo mode')),
-                      );
-                    },
-                    child: const Text('Forgot Password?'),
-                  ),
-                ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 32),
 
                 // Login button
                 ElevatedButton(
@@ -187,27 +186,6 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
                         ),
                 ),
                 const SizedBox(height: 24),
-
-                // Demo mode notice
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Row(
-                    children: [
-                      Icon(Icons.info_outline, color: Colors.blue, size: 20),
-                      SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Demo Mode: Enter any email and password (6+ chars) to login.',
-                          style: TextStyle(color: Colors.blue, fontSize: 12),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
               ],
             ),
           ),

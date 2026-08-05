@@ -1,26 +1,21 @@
 {
   "project_info": {
-    "project_number": "000000000000",
-    "project_id": "victoria-fabrics-placeholder",
-    "storage_bucket": "victoria-fabrics-placeholder.appspot.com"
+    "project_number": "1010144166475",
+    "project_id": "victoria-fabrics",
+    "storage_bucket": "victoria-fabrics.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:000000000000:android:0000000000000000000000",
+        "mobilesdk_app_id": "1:1010144166475:android:27384e1b5bc8721b02c3ce",
         "android_client_info": {
           "package_name": "com.fabrichaven.fabric_haven"
         }
       },
-      "oauth_client": [
-        {
-          "client_id": "000000000000-placeholder.apps.googleusercontent.com",
-          "client_type": 3
-        }
-      ],
+      "oauth_client": [],
       "api_key": [
         {
-          "current_key": "REPLACE_WITH_REAL_KEY_FROM_FIREBASE_CONSOLE"
+          "current_key": "AIzaSyBBSZ-7bMCLN2kGVI7JoTU0W27wHnn3Uzk"
         }
       ],
       "services": {

@@ -37,7 +37,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Fabric Haven'),
+        title: const Text('Victoria Fabrics'),
         actions: [
           IconButton(
             icon: const Icon(Icons.search),

@@ -73,7 +73,10 @@ class AdminDashboardScreen extends ConsumerWidget {
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [AppTheme.primaryColor, AppTheme.primaryColor.withOpacity(0.8)],
+                  colors: [
+                    AppTheme.primaryColor,
+                    AppTheme.primaryColor.withOpacity(0.75)
+                  ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -92,7 +95,7 @@ class AdminDashboardScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Here\'s what\'s happening with your store today.',
+                    'Here\'s what\'s happening with Victoria Fabrics today.',
                     style: TextStyle(color: Colors.white70),
                   ),
                 ],
@@ -217,6 +220,9 @@ class AdminDashboardScreen extends ConsumerWidget {
   void _showNotifications(BuildContext context) {
     showModalBottomSheet(
       context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (context) => Container(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -234,7 +240,8 @@ class AdminDashboardScreen extends ConsumerWidget {
             ListTile(
               leading: const CircleAvatar(
                 backgroundColor: Colors.orange,
-                child: Icon(Icons.notifications, color: Colors.white, size: 20),
+                child:
+                    Icon(Icons.notifications, color: Colors.white, size: 20),
               ),
               title: const Text('New Order #A1B2C3'),
               subtitle: const Text('2 minutes ago'),
@@ -246,8 +253,7 @@ class AdminDashboardScreen extends ConsumerWidget {
                 child: Icon(Icons.inventory, color: Colors.white, size: 20),
               ),
               title: const Text('Low stock alert'),
-              subtitle: const Text('Royal Ankara Print - 3 left'),
-              trailing: const Text(''),
+              subtitle: const Text('Royal Ankara Print — 3 left'),
             ),
             const SizedBox(height: 16),
           ],
@@ -290,7 +296,7 @@ class _StatCard extends StatelessWidget {
                   ),
                   child: Icon(icon, color: color, size: 24),
                 ),
-                Icon(Icons.trending_up, color: Colors.green, size: 16),
+                const Icon(Icons.trending_up, color: Colors.green, size: 16),
               ],
             ),
             Column(
@@ -384,7 +390,7 @@ class _RecentOrdersList extends StatelessWidget {
           ),
           const Divider(height: 1),
           _OrderTile(
-            orderId: '#G7H8I9J',
+            orderId: '#G7H8I9',
             customer: 'Emmanuel Obi',
             amount: '₦32,000',
             status: 'Delivered',
@@ -426,14 +432,18 @@ class _OrderTile extends StatelessWidget {
         children: [
           Text(amount, style: const TextStyle(fontWeight: FontWeight.bold)),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
             decoration: BoxDecoration(
               color: statusColor.withOpacity(0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
               status,
-              style: TextStyle(color: statusColor, fontSize: 10, fontWeight: FontWeight.w600),
+              style: TextStyle(
+                  color: statusColor,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600),
             ),
           ),
         ],

@@ -1,11 +1,10 @@
 class AppConstants {
-  static const String appName = 'Fabric Haven';
+  static const String appName = 'Victoria Fabrics';
+  static const String adminEmail = 'admin@victoriafabrics.com';
   static const String currencySymbol = '₦';
   static const String currencyCode = 'NGN';
-  
+
   static const List<String> measurementUnits = ['Yard', 'Meter', 'Piece'];
-  
-  static const String demoModeMessage = '[Fabric Haven] Running in demo mode with mock data.';
 }
 
 enum MeasurementUnit {

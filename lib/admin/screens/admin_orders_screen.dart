@@ -12,7 +12,8 @@ class AdminOrdersScreen extends ConsumerStatefulWidget {
   ConsumerState<AdminOrdersScreen> createState() => _AdminOrdersScreenState();
 }
 
-class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> with SingleTickerProviderStateMixin {
+class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   @override
@@ -58,42 +59,27 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> with Sing
   }
 }
 
-class _OrdersList extends StatelessWidget {
+class _OrdersList extends StatefulWidget {
   final OrderStatus? filterStatus;
 
   const _OrdersList({this.filterStatus});
 
   @override
-  Widget build(BuildContext context) {
-    // Demo orders data
-    final orders = _getDemoOrders();
+  State<_OrdersList> createState() => _OrdersListState();
+}
 
-    if (orders.isEmpty) {
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.receipt_long, size: 80, color: Colors.grey),
-            SizedBox(height: 16),
-            Text('No orders found'),
-          ],
-        ),
-      );
-    }
+class _OrdersListState extends State<_OrdersList> {
+  late List<_AdminOrder> _orders;
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: orders.length,
-      itemBuilder: (context, index) {
-        final order = orders[index];
-        return _OrderCard(order: order);
-      },
-    );
+  @override
+  void initState() {
+    super.initState();
+    _orders = _buildOrders();
   }
 
-  List<_DemoOrder> _getDemoOrders() {
-    final allOrders = [
-      _DemoOrder(
+  List<_AdminOrder> _buildOrders() {
+    final all = [
+      _AdminOrder(
         id: 'ORD-001',
         customerName: 'Adebayo Johnson',
         customerPhone: '08012345678',
@@ -104,7 +90,7 @@ class _OrdersList extends StatelessWidget {
         deliveryType: DeliveryType.delivery,
         address: '15 Admiralty Way, Lekki Phase 1, Lagos',
       ),
-      _DemoOrder(
+      _AdminOrder(
         id: 'ORD-002',
         customerName: 'Chioma Adekunle',
         customerPhone: '08123456789',
@@ -113,9 +99,9 @@ class _OrdersList extends StatelessWidget {
         status: OrderStatus.confirmed,
         createdAt: DateTime.now().subtract(const Duration(hours: 5)),
         deliveryType: DeliveryType.pickup,
-        address: 'Fabric Haven Store, Lagos',
+        address: 'Victoria Fabrics Store, Lagos',
       ),
-      _DemoOrder(
+      _AdminOrder(
         id: 'ORD-003',
         customerName: 'Emmanuel Obi',
         customerPhone: '08098765432',
@@ -126,7 +112,7 @@ class _OrdersList extends StatelessWidget {
         deliveryType: DeliveryType.delivery,
         address: '25 Ajah Road, Ajah, Lagos',
       ),
-      _DemoOrder(
+      _AdminOrder(
         id: 'ORD-004',
         customerName: 'Fatima Ibrahim',
         customerPhone: '08123412341',
@@ -135,9 +121,9 @@ class _OrdersList extends StatelessWidget {
         status: OrderStatus.ready,
         createdAt: DateTime.now().subtract(const Duration(hours: 12)),
         deliveryType: DeliveryType.pickup,
-        address: 'Fabric Haven Store, Lagos',
+        address: 'Victoria Fabrics Store, Lagos',
       ),
-      _DemoOrder(
+      _AdminOrder(
         id: 'ORD-005',
         customerName: 'Olumide Santos',
         customerPhone: '08055555555',
@@ -150,12 +136,50 @@ class _OrdersList extends StatelessWidget {
       ),
     ];
 
-    if (filterStatus == null) return allOrders;
-    return allOrders.where((o) => o.status == filterStatus).toList();
+    if (widget.filterStatus == null) return all;
+    return all.where((o) => o.status == widget.filterStatus).toList();
+  }
+
+  void _updateOrderStatus(String orderId, OrderStatus newStatus) {
+    setState(() {
+      final index = _orders.indexWhere((o) => o.id == orderId);
+      if (index != -1) {
+        _orders[index] = _orders[index].copyWith(status: newStatus);
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_orders.isEmpty) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.receipt_long, size: 80, color: Colors.grey),
+            SizedBox(height: 16),
+            Text('No orders found',
+                style: TextStyle(color: Colors.grey, fontSize: 16)),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: _orders.length,
+      itemBuilder: (context, index) {
+        final order = _orders[index];
+        return _OrderCard(
+          order: order,
+          onStatusUpdate: _updateOrderStatus,
+        );
+      },
+    );
   }
 }
 
-class _DemoOrder {
+class _AdminOrder {
   final String id;
   final String customerName;
   final String customerPhone;
@@ -166,7 +190,7 @@ class _DemoOrder {
   final DeliveryType deliveryType;
   final String address;
 
-  _DemoOrder({
+  _AdminOrder({
     required this.id,
     required this.customerName,
     required this.customerPhone,
@@ -177,12 +201,27 @@ class _DemoOrder {
     required this.deliveryType,
     required this.address,
   });
+
+  _AdminOrder copyWith({OrderStatus? status}) {
+    return _AdminOrder(
+      id: id,
+      customerName: customerName,
+      customerPhone: customerPhone,
+      items: items,
+      total: total,
+      status: status ?? this.status,
+      createdAt: createdAt,
+      deliveryType: deliveryType,
+      address: address,
+    );
+  }
 }
 
 class _OrderCard extends StatelessWidget {
-  final _DemoOrder order;
+  final _AdminOrder order;
+  final void Function(String orderId, OrderStatus newStatus) onStatusUpdate;
 
-  const _OrderCard({required this.order});
+  const _OrderCard({required this.order, required this.onStatusUpdate});
 
   Color _getStatusColor() {
     switch (order.status) {
@@ -226,13 +265,14 @@ class _OrderCard extends StatelessWidget {
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 4),
                     decoration: BoxDecoration(
                       color: _getStatusColor().withOpacity(0.1),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
-                      order.status.name.toUpperCase(),
+                      order.status.displayName.toUpperCase(),
                       style: TextStyle(
                         color: _getStatusColor(),
                         fontWeight: FontWeight.w600,
@@ -247,38 +287,49 @@ class _OrderCard extends StatelessWidget {
                 children: [
                   const Icon(Icons.person, size: 16, color: Colors.grey),
                   const SizedBox(width: 4),
-                  Text(order.customerName, style: const TextStyle(fontSize: 14)),
+                  Text(order.customerName,
+                      style: const TextStyle(fontSize: 14)),
                   const SizedBox(width: 16),
                   const Icon(Icons.phone, size: 16, color: Colors.grey),
                   const SizedBox(width: 4),
-                  Text(order.customerPhone, style: TextStyle(color: Colors.grey[600], fontSize: 14)),
+                  Text(order.customerPhone,
+                      style: TextStyle(
+                          color: Colors.grey[600], fontSize: 14)),
                 ],
               ),
               const SizedBox(height: 8),
               Row(
                 children: [
-                  const Icon(Icons.shopping_bag, size: 16, color: Colors.grey),
+                  const Icon(Icons.shopping_bag,
+                      size: 16, color: Colors.grey),
                   const SizedBox(width: 4),
                   Text('${order.items} items'),
                   const SizedBox(width: 16),
-                  const Icon(Icons.local_shipping, size: 16, color: Colors.grey),
+                  const Icon(Icons.local_shipping,
+                      size: 16, color: Colors.grey),
                   const SizedBox(width: 4),
-                  Text(order.deliveryType == DeliveryType.delivery ? 'Delivery' : 'Pickup'),
+                  Text(order.deliveryType == DeliveryType.delivery
+                      ? 'Delivery'
+                      : 'Pickup'),
                 ],
               ),
               const SizedBox(height: 8),
               Row(
                 children: [
-                  const Icon(Icons.access_time, size: 16, color: Colors.grey),
+                  const Icon(Icons.access_time,
+                      size: 16, color: Colors.grey),
                   const SizedBox(width: 4),
-                  Text(dateFormat.format(order.createdAt), style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+                  Text(dateFormat.format(order.createdAt),
+                      style: TextStyle(
+                          color: Colors.grey[600], fontSize: 12)),
                 ],
               ),
               const Divider(height: 24),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Total', style: TextStyle(color: Colors.grey)),
+                  const Text('Total',
+                      style: TextStyle(color: Colors.grey)),
                   Text(
                     '₦${order.total.toStringAsFixed(0)}',
                     style: const TextStyle(
@@ -294,53 +345,63 @@ class _OrderCard extends StatelessWidget {
                 children: [
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: () => context.push('/admin/orders/${order.id}'),
+                      onPressed: () =>
+                          context.push('/admin/orders/${order.id}'),
                       child: const Text('View Details'),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  if (order.status == OrderStatus.pending)
+                  if (order.status == OrderStatus.pending) ...[
+                    const SizedBox(width: 12),
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () {
+                          onStatusUpdate(order.id, OrderStatus.confirmed);
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Order confirmed!')),
+                            const SnackBar(
+                                content: Text('Order confirmed!')),
                           );
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue,
-                        ),
+                            backgroundColor: Colors.blue),
                         child: const Text('Confirm'),
                       ),
                     ),
-                  if (order.status == OrderStatus.confirmed)
+                  ],
+                  if (order.status == OrderStatus.confirmed) ...[
+                    const SizedBox(width: 12),
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () {
+                          onStatusUpdate(order.id, OrderStatus.preparing);
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Order is being prepared!')),
+                            const SnackBar(
+                                content: Text('Preparing order!')),
                           );
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.purple,
-                        ),
+                            backgroundColor: Colors.purple),
                         child: const Text('Start Preparing'),
                       ),
                     ),
-                  if (order.status == OrderStatus.preparing || order.status == OrderStatus.ready)
+                  ],
+                  if (order.status == OrderStatus.preparing ||
+                      order.status == OrderStatus.ready) ...[
+                    const SizedBox(width: 12),
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () {
+                          onStatusUpdate(order.id, OrderStatus.delivered);
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Order completed!')),
+                            const SnackBar(
+                                content: Text('Order marked as delivered!')),
                           );
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                        ),
+                            backgroundColor: Colors.green),
                         child: const Text('Mark Delivered'),
                       ),
                     ),
+                  ],
                 ],
               ),
             ],
