@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../domain/entities/order.dart';
 import '../domain/entities/product.dart';
 import '../domain/entities/ticket.dart';
 import '../data/datasources/mock_data_source.dart';
@@ -41,16 +42,30 @@ class FirestoreService {
 
   // ─── Orders ───────────────────────────────────────────────────────
 
+  /// All orders (admin view)
   Stream<List<Map<String, dynamic>>> ordersStream() {
     return _db
         .collection('orders')
         .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snap) => snap.docs
-            .map((doc) => <String, dynamic>{...doc.data(), 'firestoreId': doc.id})
+            .map((doc) =>
+                <String, dynamic>{...doc.data(), 'firestoreId': doc.id})
             .toList());
   }
 
+  /// Per-user orders (customer view)
+  Stream<List<Order>> userOrdersStream(String uid) {
+    return _db
+        .collection('orders')
+        .where('userId', isEqualTo: uid)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snap) =>
+            snap.docs.map((doc) => Order.fromMap(doc.id, doc.data())).toList());
+  }
+
+  /// Create an order and return its Firestore document ID
   Future<String> createOrder(Map<String, dynamic> orderData) async {
     orderData['createdAt'] = FieldValue.serverTimestamp();
     final ref = await _db.collection('orders').add(orderData);
@@ -71,8 +86,9 @@ class FirestoreService {
         .collection('tickets')
         .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((snap) =>
-            snap.docs.map((doc) => SupportTicket.fromMap(doc.id, doc.data())).toList());
+        .map((snap) => snap.docs
+            .map((doc) => SupportTicket.fromMap(doc.id, doc.data()))
+            .toList());
   }
 
   Future<void> submitTicket(SupportTicket ticket) async {
@@ -85,7 +101,6 @@ class FirestoreService {
 
   // ─── Seed ─────────────────────────────────────────────────────────
 
-  /// Seeds Firestore with mock products the very first time the app runs.
   Future<void> seedProductsIfEmpty() async {
     final snap = await _db.collection('products').limit(1).get();
     if (snap.docs.isNotEmpty) return;

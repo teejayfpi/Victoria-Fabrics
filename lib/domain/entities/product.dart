@@ -79,6 +79,29 @@ class Product {
     );
   }
 
+  /// Lightweight placeholder used when reconstructing order items from Firestore.
+  /// Only id, name, and one imageUrl are populated — enough for order history display.
+  factory Product.placeholder({
+    required String id,
+    required String name,
+    required String imageUrl,
+  }) {
+    return Product(
+      id: id,
+      name: name,
+      description: '',
+      categoryId: '',
+      categoryName: '',
+      imageUrls: imageUrl.isNotEmpty ? [imageUrl] : [],
+      pricePerYard: 0,
+      pricePerMeter: 0,
+      pricePerPiece: 0,
+      inStock: true,
+      colors: const [],
+      availableUnits: const ['Yard', 'Meter', 'Piece'],
+    );
+  }
+
   Product copyWith({
     String? name,
     String? description,

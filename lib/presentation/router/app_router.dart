@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../screens/home_screen.dart';
@@ -10,16 +11,42 @@ import '../screens/order_confirmation_screen.dart';
 import '../screens/orders_screen.dart';
 import '../screens/profile_screen.dart';
 import '../screens/search_screen.dart';
+import '../screens/sign_in_screen.dart';
 import '../screens/support_ticket_screen.dart';
 import '../screens/main_shell.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellNavigatorKey = GlobalKey<NavigatorState>();
 
+/// Routes that require a signed-in user
+const _protectedRoutes = ['/checkout', '/orders'];
+
 final appRouter = GoRouter(
   navigatorKey: _rootNavigatorKey,
   initialLocation: '/',
+  redirect: (context, state) {
+    final user = FirebaseAuth.instance.currentUser;
+    final isSignedIn = user != null;
+    final loc = state.matchedLocation;
+
+    // Redirect to sign-in if trying to access a protected route
+    if (!isSignedIn && _protectedRoutes.any((r) => loc.startsWith(r))) {
+      return '/signin?from=${Uri.encodeComponent(loc)}';
+    }
+    // Already signed in and going to sign-in → send home
+    if (isSignedIn && loc == '/signin') return '/';
+    return null;
+  },
   routes: [
+    // Sign-in screen (outside the shell so no bottom nav)
+    GoRoute(
+      path: '/signin',
+      builder: (context, state) {
+        final from = state.uri.queryParameters['from'];
+        return SignInScreen(redirectTo: from);
+      },
+    ),
+
     ShellRoute(
       navigatorKey: _shellNavigatorKey,
       builder: (context, state, child) => MainShell(child: child),
@@ -51,6 +78,7 @@ final appRouter = GoRouter(
         ),
       ],
     ),
+
     GoRoute(
       path: '/category/:id',
       builder: (context, state) =>

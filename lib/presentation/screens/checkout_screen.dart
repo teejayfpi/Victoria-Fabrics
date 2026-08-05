@@ -44,28 +44,39 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     _prefilled = true;
   }
 
-  void _placeOrder() {
+  Future<void> _placeOrder() async {
     if (!_formKey.currentState!.validate()) return;
 
     final cartItems = ref.read(cartProvider);
     final totalAmount = ref.read(cartTotalProvider);
 
-    ref.read(orderProvider.notifier).createOrder(
-          items: cartItems,
-          totalAmount: totalAmount,
-          deliveryType: _deliveryType,
-          deliveryAddress: _deliveryType == DeliveryType.delivery
-              ? _addressController.text
-              : null,
-          pickupLocation: _deliveryType == DeliveryType.pickup
-              ? 'Victoria Fabrics Store, Lagos'
-              : null,
-          customerName: _nameController.text,
-          customerPhone: _phoneController.text,
-        );
+    try {
+      await ref.read(orderNotifierProvider.notifier).createOrder(
+            items: cartItems,
+            totalAmount: totalAmount,
+            deliveryType: _deliveryType,
+            deliveryAddress: _deliveryType == DeliveryType.delivery
+                ? _addressController.text
+                : null,
+            pickupLocation: _deliveryType == DeliveryType.pickup
+                ? 'Victoria Fabrics Store, Lagos'
+                : null,
+            customerName: _nameController.text,
+            customerPhone: _phoneController.text,
+          );
 
-    ref.read(cartProvider.notifier).clearCart();
-    context.go('/order-confirmation');
+      ref.read(cartProvider.notifier).clearCart();
+      if (mounted) context.go('/order-confirmation');
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to place order. Please try again. ($e)'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   @override
