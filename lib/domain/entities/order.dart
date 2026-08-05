@@ -4,6 +4,25 @@ enum DeliveryType { delivery, pickup }
 
 enum OrderStatus { pending, confirmed, preparing, ready, delivered, cancelled }
 
+extension OrderStatusX on OrderStatus {
+  String get displayName {
+    switch (this) {
+      case OrderStatus.pending:
+        return 'Pending';
+      case OrderStatus.confirmed:
+        return 'Confirmed';
+      case OrderStatus.preparing:
+        return 'Preparing';
+      case OrderStatus.ready:
+        return 'Ready';
+      case OrderStatus.delivered:
+        return 'Delivered';
+      case OrderStatus.cancelled:
+        return 'Cancelled';
+    }
+  }
+}
+
 class Order {
   final String id;
   final List<CartItem> items;
