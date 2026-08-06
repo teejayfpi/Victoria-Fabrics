@@ -20,6 +20,11 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
+      - name: Fix corrupt Android SDK 35 (reinstall clean copy)
+        run: |
+          rm -rf $ANDROID_SDK_ROOT/platforms/android-35
+          yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager "platforms;android-35"
+
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -78,6 +83,11 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
+
+      - name: Fix corrupt Android SDK 35 (reinstall clean copy)
+        run: |
+          rm -rf $ANDROID_SDK_ROOT/platforms/android-35
+          yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager "platforms;android-35"
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
