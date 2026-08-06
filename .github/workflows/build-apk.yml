@@ -30,6 +30,9 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: ⬇️ Print debug keystore SHA-1 (add this to Firebase Console)
+        run: keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android 2>/dev/null | grep "SHA1:"
+
       - name: Generate splash screen
         run: dart run flutter_native_splash:create
 
