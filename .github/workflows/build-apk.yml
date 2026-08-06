@@ -30,14 +30,23 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: ⬇️ Print debug keystore SHA-1 (add this to Firebase Console)
-        run: keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android 2>/dev/null | grep "SHA1:"
-
       - name: Generate splash screen
         run: dart run flutter_native_splash:create
 
       - name: Build debug APK (customer)
         run: flutter build apk --debug --target lib/main.dart
+
+      - name: ⬇️ SHA-1 for Firebase Console (copy the value below)
+        run: |
+          echo "============================================"
+          echo "  Add this SHA-1 to your Firebase project  "
+          echo "============================================"
+          keytool -list -v \
+            -keystore ~/.android/debug.keystore \
+            -alias androiddebugkey \
+            -storepass android -keypass android \
+            | grep "SHA1:"
+          echo "============================================"
 
       - name: Upload customer debug APK
         uses: actions/upload-artifact@v4
