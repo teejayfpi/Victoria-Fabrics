@@ -14,18 +14,12 @@ import '../../domain/entities/product.dart';
 
 final _adminNavigatorKey = GlobalKey<NavigatorState>();
 
-ProviderContainer? _adminContainer;
-
-void setAdminContainer(ProviderContainer container) {
-  _adminContainer = container;
-}
-
 final adminRouter = GoRouter(
   navigatorKey: _adminNavigatorKey,
   initialLocation: '/admin/login',
   redirect: (context, state) {
-    final isLoggedIn =
-        _adminContainer?.read(isAdminLoggedInProvider) ?? false;
+    final container = ProviderScope.containerOf(context);
+    final isLoggedIn = container.read(isAdminLoggedInProvider);
     final isLoginRoute = state.matchedLocation == '/admin/login';
     if (!isLoggedIn && !isLoginRoute) return '/admin/login';
     if (isLoggedIn && isLoginRoute) return '/admin';
