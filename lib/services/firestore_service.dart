@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_firestore/cloud_firestore.dart' hide Order;
 import '../domain/entities/order.dart';
 import '../domain/entities/product.dart';
 import '../domain/entities/ticket.dart';
