@@ -1,6 +1,7 @@
 {
   "project_info": {
     "project_number": "1010144166475",
+    "firebase_url": "https://victoria-fabrics-default-rtdb.firebaseio.com",
     "project_id": "victoria-fabrics",
     "storage_bucket": "victoria-fabrics.firebasestorage.app"
   },
@@ -12,7 +13,20 @@
           "package_name": "com.fabrichaven.fabric_haven"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "1010144166475-2e1ketnivtoe9223amceoah4pvgae60i.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.fabrichaven.fabric_haven",
+            "certificate_hash": "a029a10f230a5c9a68d3f616feae38f6d7148a26"
+          }
+        },
+        {
+          "client_id": "1010144166475-6ke40f39m9f4tim92q46gu8p75igqeci.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyBBSZ-7bMCLN2kGVI7JoTU0W27wHnn3Uzk"
@@ -20,7 +34,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1010144166475-6ke40f39m9f4tim92q46gu8p75igqeci.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }
