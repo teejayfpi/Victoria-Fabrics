@@ -8,7 +8,7 @@ plugins {
 
 android {
     namespace = "com.fabrichaven.fabric_haven"
-    compileSdk = 35
+    compileSdk = 34
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
