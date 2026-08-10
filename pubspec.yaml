@@ -8,10 +8,13 @@ environment:
   sdk: ^3.5.0
 
 flutter_native_splash:
-  color: "#ffffff"
+  color: "#1B1714"
   image: assets/images/splash.jpg
   android: true
   ios: true
+  android_12:
+    color: "#1B1714"
+    image: assets/images/splash.jpg
   web: false
 
 dependencies:
@@ -37,12 +40,12 @@ dependencies:
 
   # Notifications
   flutter_local_notifications: ^18.0.1
+  flutter_native_splash: ^2.4.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^4.0.0
-  flutter_native_splash: ^2.4.1
 
 flutter:
   uses-material-design: true
