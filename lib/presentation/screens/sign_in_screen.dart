@@ -20,15 +20,17 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   Future<void> _signInWithGoogle() async {
     setState(() => _loading = true);
     try {
-      await ref.read(authControllerProvider.notifier).signInWithGoogle();
-      if (mounted) {
+      final signedIn = await ref
+          .read(authControllerProvider.notifier)
+          .signInWithGoogle();
+      if (mounted && signedIn) {
         context.go(widget.redirectTo ?? '/');
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Sign-in failed. Please try again.\n$e'),
+            content: Text(authErrorMessage(e)),
             backgroundColor: Colors.red,
           ),
         );
@@ -73,7 +75,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
               ),
               const SizedBox(height: 10),
               Text(
-                'Sign in to save your orders and\nshop seamlessly across devices.',
+                'Use your Google account to register or sign in.\nNo separate password is required.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: Colors.grey[600],
