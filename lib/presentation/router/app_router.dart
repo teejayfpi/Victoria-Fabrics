@@ -14,6 +14,7 @@ import '../screens/search_screen.dart';
 import '../screens/sign_in_screen.dart';
 import '../screens/support_ticket_screen.dart';
 import '../screens/main_shell.dart';
+import '../screens/splash_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellNavigatorKey = GlobalKey<NavigatorState>();
@@ -21,13 +22,19 @@ final _shellNavigatorKey = GlobalKey<NavigatorState>();
 /// Routes that require a signed-in user
 const _protectedRoutes = ['/checkout', '/orders'];
 
+/// Route shown while the branded splash animation plays.
+const String splashRoute = '/splash';
+
 final appRouter = GoRouter(
   navigatorKey: _rootNavigatorKey,
-  initialLocation: '/',
+  initialLocation: splashRoute,
   redirect: (context, state) {
     final user = FirebaseAuth.instance.currentUser;
     final isSignedIn = user != null;
     final loc = state.matchedLocation;
+
+    // The splash screen owns its own hand-off to the next route.
+    if (loc == splashRoute) return null;
 
     // Redirect to sign-in if trying to access a protected route
     if (!isSignedIn && _protectedRoutes.any((r) => loc.startsWith(r))) {
@@ -38,6 +45,12 @@ final appRouter = GoRouter(
     return null;
   },
   routes: [
+    // Branded splash (outside the shell so no bottom nav)
+    GoRoute(
+      path: splashRoute,
+      builder: (context, state) => const SplashScreen(),
+    ),
+
     // Sign-in screen (outside the shell so no bottom nav)
     GoRoute(
       path: '/signin',

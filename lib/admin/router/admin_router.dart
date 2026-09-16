@@ -10,22 +10,30 @@ import '../screens/admin_orders_screen.dart';
 import '../screens/admin_categories_screen.dart';
 import '../screens/admin_analytics_screen.dart';
 import '../screens/admin_tickets_screen.dart';
+import '../screens/admin_splash_screen.dart';
 import '../../domain/entities/product.dart';
 
 final _adminNavigatorKey = GlobalKey<NavigatorState>();
 
 final adminRouter = GoRouter(
   navigatorKey: _adminNavigatorKey,
-  initialLocation: '/admin/login',
+  initialLocation: '/admin/splash',
   redirect: (context, state) {
     final container = ProviderScope.containerOf(context);
     final isLoggedIn = container.read(isAdminLoggedInProvider);
-    final isLoginRoute = state.matchedLocation == '/admin/login';
+    final loc = state.matchedLocation;
+    // The splash screen owns its own hand-off.
+    if (loc == '/admin/splash') return null;
+    final isLoginRoute = loc == '/admin/login';
     if (!isLoggedIn && !isLoginRoute) return '/admin/login';
     if (isLoggedIn && isLoginRoute) return '/admin';
     return null;
   },
   routes: [
+    GoRoute(
+      path: '/admin/splash',
+      builder: (context, state) => const AdminSplashScreen(),
+    ),
     GoRoute(
       path: '/admin/login',
       builder: (context, state) => const AdminLoginScreen(),
