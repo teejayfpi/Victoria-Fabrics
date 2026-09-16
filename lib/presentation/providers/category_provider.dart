@@ -1,17 +1,25 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../data/datasources/mock_data_source.dart';
 import '../../domain/entities/category.dart';
+import '../../services/firestore_service.dart';
 
+/// Live category list from Firestore.
+final categoriesStreamProvider = StreamProvider<List<Category>>((ref) {
+  return FirestoreService.instance.categoriesStream();
+});
+
+/// Synchronous view of the catalogue, used by screens that render a list
+/// directly. Empty until the first Firestore snapshot arrives.
 final categoriesProvider = Provider<List<Category>>((ref) {
-  print('[Fabric Haven] Loading categories...');
-  return MockDataSource.categories;
+  return ref.watch(categoriesStreamProvider).maybeWhen(
+        data: (categories) => categories,
+        orElse: () => const [],
+      );
 });
 
 final categoryByIdProvider = Provider.family<Category?, String>((ref, id) {
   final categories = ref.watch(categoriesProvider);
-  try {
-    return categories.firstWhere((c) => c.id == id);
-  } catch (e) {
-    return null;
+  for (final category in categories) {
+    if (category.id == id) return category;
   }
+  return null;
 });

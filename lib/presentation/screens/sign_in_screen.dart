@@ -87,17 +87,17 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
               const Spacer(flex: 2),
 
               // Benefits
-              _BenefitRow(
+              const _BenefitRow(
                 icon: Icons.receipt_long,
                 text: 'Track all your orders in one place',
               ),
               const SizedBox(height: 14),
-              _BenefitRow(
+              const _BenefitRow(
                 icon: Icons.shopping_cart,
                 text: 'Faster checkout — your info is saved',
               ),
               const SizedBox(height: 14),
-              _BenefitRow(
+              const _BenefitRow(
                 icon: Icons.notifications_active_outlined,
                 text: 'Get updates when your order is ready',
               ),

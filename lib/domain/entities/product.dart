@@ -79,12 +79,17 @@ class Product {
     );
   }
 
-  /// Lightweight placeholder used when reconstructing order items from Firestore.
-  /// Only id, name, and one imageUrl are populated — enough for order history display.
+  /// Lightweight stand-in used when rebuilding an order's items from Firestore.
+  ///
+  /// The order item stores the price that was actually charged, not the
+  /// product's current price, so [unitPrice] is applied to every unit: the
+  /// reconstructed line total must match what the customer paid even if the
+  /// catalogue price has since changed or the product was deleted.
   factory Product.placeholder({
     required String id,
     required String name,
     required String imageUrl,
+    double unitPrice = 0,
   }) {
     return Product(
       id: id,
@@ -93,9 +98,9 @@ class Product {
       categoryId: '',
       categoryName: '',
       imageUrls: imageUrl.isNotEmpty ? [imageUrl] : [],
-      pricePerYard: 0,
-      pricePerMeter: 0,
-      pricePerPiece: 0,
+      pricePerYard: unitPrice,
+      pricePerMeter: unitPrice,
+      pricePerPiece: unitPrice,
       inStock: true,
       colors: const [],
       availableUnits: const ['Yard', 'Meter', 'Piece'],

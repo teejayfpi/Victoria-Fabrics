@@ -4,15 +4,38 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../core/theme/app_theme.dart';
 import '../../domain/entities/order.dart';
+import '../../services/firestore_service.dart';
+
+/// All orders, live from Firestore (admin view).
+final _adminOrdersProvider = StreamProvider<List<AdminOrder>>((ref) {
+  return FirestoreService.instance.ordersStream().map(
+        (rows) => rows.map(AdminOrder.fromMap).toList(),
+      );
+});
+
+/// A single order by its Firestore document id, live from Firestore.
+final adminOrderByIdProvider =
+    StreamProvider.family<AdminOrder?, String>((ref, firestoreId) {
+  return FirestoreService.instance
+      .ordersStream()
+      .map((rows) {
+        for (final row in rows) {
+          if (row['firestoreId'] == firestoreId) {
+            return AdminOrder.fromMap(row);
+          }
+        }
+        return null;
+      });
+});
 
 class AdminOrdersScreen extends ConsumerStatefulWidget {
   const AdminOrdersScreen({super.key});
 
   @override
-  ConsumerState<AdminOrdersScreen> createState() => _AdminOrdersScreenState();
+  ConsumerState<AdminOrdersScreen> createState() => AdminOrdersScreenState();
 }
 
-class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
+class AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
@@ -47,7 +70,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
       ),
       body: TabBarView(
         controller: _tabController,
-        children: [
+        children: const [
           _OrdersList(filterStatus: null),
           _OrdersList(filterStatus: OrderStatus.pending),
           _OrdersList(filterStatus: OrderStatus.confirmed),
@@ -59,166 +82,140 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
   }
 }
 
-class _OrdersList extends StatefulWidget {
+class _OrdersList extends ConsumerWidget {
   final OrderStatus? filterStatus;
 
   const _OrdersList({this.filterStatus});
 
   @override
-  State<_OrdersList> createState() => _OrdersListState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final ordersAsync = ref.watch(_adminOrdersProvider);
 
-class _OrdersListState extends State<_OrdersList> {
-  late List<_AdminOrder> _orders;
-
-  @override
-  void initState() {
-    super.initState();
-    _orders = _buildOrders();
-  }
-
-  List<_AdminOrder> _buildOrders() {
-    final all = [
-      _AdminOrder(
-        id: 'ORD-001',
-        customerName: 'Adebayo Johnson',
-        customerPhone: '08012345678',
-        items: 3,
-        total: 125000,
-        status: OrderStatus.pending,
-        createdAt: DateTime.now().subtract(const Duration(hours: 2)),
-        deliveryType: DeliveryType.delivery,
-        address: '15 Admiralty Way, Lekki Phase 1, Lagos',
-      ),
-      _AdminOrder(
-        id: 'ORD-002',
-        customerName: 'Chioma Adekunle',
-        customerPhone: '08123456789',
-        items: 5,
-        total: 245000,
-        status: OrderStatus.confirmed,
-        createdAt: DateTime.now().subtract(const Duration(hours: 5)),
-        deliveryType: DeliveryType.pickup,
-        address: 'Victoria Fabrics Store, Lagos',
-      ),
-      _AdminOrder(
-        id: 'ORD-003',
-        customerName: 'Emmanuel Obi',
-        customerPhone: '08098765432',
-        items: 2,
-        total: 45000,
-        status: OrderStatus.preparing,
-        createdAt: DateTime.now().subtract(const Duration(hours: 8)),
-        deliveryType: DeliveryType.delivery,
-        address: '25 Ajah Road, Ajah, Lagos',
-      ),
-      _AdminOrder(
-        id: 'ORD-004',
-        customerName: 'Fatima Ibrahim',
-        customerPhone: '08123412341',
-        items: 4,
-        total: 180000,
-        status: OrderStatus.ready,
-        createdAt: DateTime.now().subtract(const Duration(hours: 12)),
-        deliveryType: DeliveryType.pickup,
-        address: 'Victoria Fabrics Store, Lagos',
-      ),
-      _AdminOrder(
-        id: 'ORD-005',
-        customerName: 'Olumide Santos',
-        customerPhone: '08055555555',
-        items: 1,
-        total: 22000,
-        status: OrderStatus.delivered,
-        createdAt: DateTime.now().subtract(const Duration(days: 1)),
-        deliveryType: DeliveryType.delivery,
-        address: '10 Victoria Island, Lagos',
-      ),
-    ];
-
-    if (widget.filterStatus == null) return all;
-    return all.where((o) => o.status == widget.filterStatus).toList();
-  }
-
-  void _updateOrderStatus(String orderId, OrderStatus newStatus) {
-    setState(() {
-      final index = _orders.indexWhere((o) => o.id == orderId);
-      if (index != -1) {
-        _orders[index] = _orders[index].copyWith(status: newStatus);
-      }
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (_orders.isEmpty) {
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.receipt_long, size: 80, color: Colors.grey),
-            SizedBox(height: 16),
-            Text('No orders found',
-                style: TextStyle(color: Colors.grey, fontSize: 16)),
-          ],
+    return ordersAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, _) => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 64, color: Colors.red),
+              const SizedBox(height: 16),
+              const Text('Could not load orders',
+                  style:
+                      TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              Text('$error',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+              const SizedBox(height: 20),
+              ElevatedButton.icon(
+                onPressed: () => ref.invalidate(_adminOrdersProvider),
+                icon: const Icon(Icons.refresh),
+                label: const Text('Retry'),
+              ),
+            ],
+          ),
         ),
-      );
-    }
+      ),
+      data: (orders) {
+        final filtered = filterStatus == null
+            ? orders
+            : orders.where((o) => o.status == filterStatus).toList();
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: _orders.length,
-      itemBuilder: (context, index) {
-        final order = _orders[index];
-        return _OrderCard(
-          order: order,
-          onStatusUpdate: _updateOrderStatus,
+        if (filtered.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.receipt_long,
+                    size: 80,
+                    color: Colors.grey[400]),
+                const SizedBox(height: 16),
+                Text(
+                  filterStatus == null
+                      ? 'No orders yet'
+                      : 'No ${filterStatus!.displayName.toLowerCase()} orders',
+                  style: TextStyle(color: Colors.grey[600], fontSize: 16),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: filtered.length,
+          itemBuilder: (context, index) {
+            final order = filtered[index];
+            return _OrderCard(
+              order: order,
+              onStatusUpdate: (firestoreId, newStatus) =>
+                  _updateStatus(context, firestoreId, newStatus),
+            );
+          },
         );
       },
     );
   }
+
+  Future<void> _updateStatus(
+      BuildContext context, String firestoreId, OrderStatus newStatus) async {
+    try {
+      await FirestoreService.instance
+          .updateOrderStatus(firestoreId, newStatus.name);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Order marked ${newStatus.displayName}')),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not update order: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
 }
 
-class _AdminOrder {
-  final String id;
-  final String customerName;
-  final String customerPhone;
-  final int items;
-  final double total;
-  final OrderStatus status;
-  final DateTime createdAt;
-  final DeliveryType deliveryType;
-  final String address;
+/// Adapter over the Firestore [Order] entity.
+///
+/// Carries both the Firestore document id (needed to write a status update)
+/// and the customer-facing order id (shown in the UI).
+class AdminOrder {
+  final String firestoreId;
+  final Order order;
 
-  _AdminOrder({
-    required this.id,
-    required this.customerName,
-    required this.customerPhone,
-    required this.items,
-    required this.total,
-    required this.status,
-    required this.createdAt,
-    required this.deliveryType,
-    required this.address,
-  });
+  const AdminOrder({required this.firestoreId, required this.order});
 
-  _AdminOrder copyWith({OrderStatus? status}) {
-    return _AdminOrder(
-      id: id,
-      customerName: customerName,
-      customerPhone: customerPhone,
-      items: items,
-      total: total,
-      status: status ?? this.status,
-      createdAt: createdAt,
-      deliveryType: deliveryType,
-      address: address,
+  String get id => order.id;
+  String get customerName => order.customerName;
+  String get customerPhone => order.customerPhone;
+  int get items => order.items.length;
+  double get total => order.totalAmount;
+  OrderStatus get status => order.status;
+  DateTime get createdAt => order.createdAt;
+  DeliveryType get deliveryType => order.deliveryType;
+  String get address =>
+      order.deliveryType == DeliveryType.pickup
+          ? (order.pickupLocation ?? 'Pickup')
+          : (order.deliveryAddress ?? '');
+
+  factory AdminOrder.fromMap(Map<String, dynamic> data) {
+    final firestoreId = data['firestoreId'] as String? ?? '';
+    return AdminOrder(
+      firestoreId: firestoreId,
+      order: Order.fromMap(firestoreId, data),
     );
   }
 }
 
 class _OrderCard extends StatelessWidget {
-  final _AdminOrder order;
+  final AdminOrder order;
   final void Function(String orderId, OrderStatus newStatus) onStatusUpdate;
 
   const _OrderCard({required this.order, required this.onStatusUpdate});
@@ -247,7 +244,7 @@ class _OrderCard extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: InkWell(
-        onTap: () => context.push('/admin/orders/${order.id}'),
+        onTap: () => context.push('/admin/orders/${order.firestoreId}'),
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -346,7 +343,7 @@ class _OrderCard extends StatelessWidget {
                   Expanded(
                     child: OutlinedButton(
                       onPressed: () =>
-                          context.push('/admin/orders/${order.id}'),
+                          context.push('/admin/orders/${order.firestoreId}'),
                       child: const Text('View Details'),
                     ),
                   ),
@@ -355,7 +352,7 @@ class _OrderCard extends StatelessWidget {
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () {
-                          onStatusUpdate(order.id, OrderStatus.confirmed);
+                          onStatusUpdate(order.firestoreId, OrderStatus.confirmed);
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                                 content: Text('Order confirmed!')),
@@ -372,7 +369,7 @@ class _OrderCard extends StatelessWidget {
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () {
-                          onStatusUpdate(order.id, OrderStatus.preparing);
+                          onStatusUpdate(order.firestoreId, OrderStatus.preparing);
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                                 content: Text('Preparing order!')),
@@ -390,7 +387,7 @@ class _OrderCard extends StatelessWidget {
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () {
-                          onStatusUpdate(order.id, OrderStatus.delivered);
+                          onStatusUpdate(order.firestoreId, OrderStatus.delivered);
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                                 content: Text('Order marked as delivered!')),

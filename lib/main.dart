@@ -1,31 +1,29 @@
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
+import 'core/bootstrap.dart';
 import 'core/theme/app_theme.dart';
+import 'core/widgets/startup_error_screen.dart';
 import 'presentation/router/app_router.dart';
-import 'services/firestore_service.dart';
-import 'services/notification_service.dart';
 
-void main() async {
+Future<void> main() async {
   final binding = WidgetsFlutterBinding.ensureInitialized();
   FlutterNativeSplash.preserve(widgetsBinding: binding);
 
-  try {
-    await Firebase.initializeApp();
-    await NotificationService.instance.init();
-    // Seed Firestore with default products if the store is brand new
-    await FirestoreService.instance.seedProductsIfEmpty();
-  } catch (error) {
-    FlutterNativeSplash.remove();
-    rethrow;
-  }
+  final result = await bootstrap();
 
-  runApp(const ProviderScope(child: VictoriaFabricsApp()));
+  runApp(
+    ProviderScope(
+      child: VictoriaFabricsApp(startupError: result.error),
+    ),
+  );
 }
 
 class VictoriaFabricsApp extends StatefulWidget {
-  const VictoriaFabricsApp({super.key});
+  /// Non-null when backend initialisation failed.
+  final Object? startupError;
+
+  const VictoriaFabricsApp({super.key, this.startupError});
 
   @override
   State<VictoriaFabricsApp> createState() => _VictoriaFabricsAppState();
@@ -35,6 +33,8 @@ class _VictoriaFabricsAppState extends State<VictoriaFabricsApp> {
   @override
   void initState() {
     super.initState();
+    // Hand the native splash over to the Flutter splash as soon as the first
+    // frame is ready.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       FlutterNativeSplash.remove();
     });
@@ -42,6 +42,15 @@ class _VictoriaFabricsAppState extends State<VictoriaFabricsApp> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.startupError != null) {
+      return MaterialApp(
+        title: 'Victoria Fabrics',
+        theme: AppTheme.lightTheme,
+        debugShowCheckedModeBanner: false,
+        home: StartupErrorScreen(error: widget.startupError),
+      );
+    }
+
     return MaterialApp.router(
       title: 'Victoria Fabrics',
       theme: AppTheme.lightTheme,

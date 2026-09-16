@@ -32,6 +32,23 @@ class _AdminProductsScreenState
             icon: const Icon(Icons.filter_list),
             onPressed: () => _showFilterDialog(context),
           ),
+          PopupMenuButton<String>(
+            onSelected: (value) {
+              if (value == 'seed') _seedCatalogue(context);
+            },
+            itemBuilder: (context) => const [
+              PopupMenuItem(
+                value: 'seed',
+                child: Row(
+                  children: [
+                    Icon(Icons.cloud_upload_outlined, size: 20),
+                    SizedBox(width: 8),
+                    Text('Seed default catalogue'),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ],
       ),
       body: productsAsync.when(
@@ -127,6 +144,51 @@ class _AdminProductsScreenState
         backgroundColor: AppTheme.primaryColor,
       ),
     );
+  }
+
+  /// Populates an empty store with the starter catalogue. Only meaningful on a
+  /// fresh Firebase project, where nothing has been added yet.
+  Future<void> _seedCatalogue(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Seed default catalogue?'),
+        content: const Text(
+          'This adds the starter categories and products to any collection '
+          'that is still empty. Existing data is left untouched.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Seed'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !context.mounted) return;
+
+    try {
+      await FirestoreService.instance.seedProductsIfEmpty();
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Default catalogue seeded')),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not seed catalogue: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   void _showFilterDialog(BuildContext context) {

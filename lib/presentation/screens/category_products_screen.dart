@@ -4,7 +4,8 @@ import 'package:go_router/go_router.dart';
 import '../providers/category_provider.dart';
 import '../providers/product_provider.dart';
 import '../widgets/product_card.dart';
-import '../../core/theme/app_theme.dart';
+import '../../core/widgets/async_state.dart';
+import '../../domain/entities/category.dart';
 
 class CategoryProductsScreen extends ConsumerWidget {
   final String categoryId;
@@ -16,25 +17,48 @@ class CategoryProductsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final category = ref.watch(categoryByIdProvider(categoryId));
-    final products = ref.watch(productsByCategoryProvider(categoryId));
+    final categoriesAsync = ref.watch(categoriesStreamProvider);
+    final productsAsync = ref.watch(allProductsStreamProvider);
 
-    if (category == null) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Not Found')),
-        body: const Center(child: Text('Category not found')),
-      );
-    }
+    // Show the name only once the category list has arrived; until then the
+    // app bar carries a neutral title rather than flickering or bailing out.
+    final category = categoriesAsync.valueOrNull?.firstWhere(
+      (c) => c.id == categoryId,
+      orElse: () => const Category(
+        id: '',
+        name: 'Category',
+        description: '',
+        imageUrl: '',
+        iconName: 'checkroom',
+      ),
+    );
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(category.name),
+        title: Text(category?.name.isNotEmpty == true
+            ? category!.name
+            : 'Category'),
       ),
-      body: products.isEmpty
-          ? const Center(
-              child: Text('No products in this category'),
-            )
-          : GridView.builder(
+      body: productsAsync.when(
+        loading: () => const LoadingState(),
+        error: (error, _) => ErrorState(
+          title: 'Could not load products',
+          error: error,
+          onRetry: () => ref.invalidate(allProductsStreamProvider),
+        ),
+        data: (allProducts) {
+          final products =
+              allProducts.where((p) => p.categoryId == categoryId).toList();
+
+          if (products.isEmpty) {
+            return const EmptyState(
+              icon: Icons.inventory_2_outlined,
+              title: 'Nothing here yet',
+              message: 'No fabrics have been added to this category.',
+            );
+          }
+
+          return GridView.builder(
               padding: const EdgeInsets.all(16),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
@@ -50,7 +74,9 @@ class CategoryProductsScreen extends ConsumerWidget {
                   onTap: () => context.push('/product/${product.id}'),
                 );
               },
-            ),
+          );
+        },
+      ),
     );
   }
 }

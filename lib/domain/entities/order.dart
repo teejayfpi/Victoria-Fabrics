@@ -131,6 +131,7 @@ class Order {
                   id: i['productId'] as String? ?? '',
                   name: i['productName'] as String? ?? '',
                   imageUrl: i['imageUrl'] as String? ?? '',
+                  unitPrice: (i['unitPrice'] as num?)?.toDouble() ?? 0,
                 ),
                 quantity: (i['quantity'] as num).toInt(),
                 selectedUnit: i['selectedUnit'] as String? ?? 'Yard',

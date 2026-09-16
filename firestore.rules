@@ -1,0 +1,98 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{db}/documents {
+
+    // ── Helpers ──────────────────────────────────────────────────────
+
+    function isAuthed() {
+      return request.auth != null;
+    }
+
+    // Admin/staff are identified by an Auth custom claim (fast, no extra
+    // read). Falls back to the users/{uid} document so the rules work
+    // immediately, before the claim has been set and the token refreshed.
+    function isAdmin() {
+      return isAuthed() && (
+        request.auth.token.get('role', '') in ['admin', 'staff']
+        ||
+        get(/databases/$(db)/documents/users/$(request.auth.uid))
+          .data.get('role', '') in ['admin', 'staff']
+      );
+    }
+
+    function isSelf(uid) {
+      return isAuthed() && request.auth.uid == uid;
+    }
+
+    // ── users ─────────────────────────────────────────────────────────
+    // The role field is server-controlled: a customer may edit their own
+    // profile but never promote themselves.
+    match /users/{uid} {
+      allow read:   if isSelf(uid) || isAdmin();
+      allow create: if isSelf(uid)
+        && !('role' in request.resource.data);
+      allow update: if isAdmin() || (
+        isSelf(uid) &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['name', 'phone', 'address', 'updatedAt'])
+      );
+      allow delete: if isAdmin();
+    }
+
+    // ── products ─────────────────────────────────────────────────────
+    // Public catalogue — anyone can browse. Only admin can manage stock.
+    match /products/{productId} {
+      allow read:  if true;
+      allow write: if isAdmin();
+    }
+
+    // ── categories ───────────────────────────────────────────────────
+    // Public catalogue metadata — readable by anyone, admin-managed.
+    match /categories/{categoryId} {
+      allow read:  if true;
+      allow write: if isAdmin();
+    }
+
+    // ── orders ───────────────────────────────────────────────────────
+    match /orders/{orderId} {
+      // A customer may read only their own orders.
+      allow read: if isAuthed() &&
+        (resource.data.userId == request.auth.uid || isAdmin());
+
+      // A customer may create an order for themselves only.
+      allow create: if isAuthed() &&
+        request.resource.data.userId == request.auth.uid;
+
+      // A customer may cancel their own pending order, touching only the
+      // status field. Admins have unrestricted update access.
+      allow update: if isAdmin() || (
+        isAuthed() &&
+        resource.data.userId == request.auth.uid &&
+        resource.data.status == 'pending' &&
+        request.resource.data.status == 'cancelled' &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status'])
+      );
+
+      allow delete: if isAdmin();
+    }
+
+    // ── tickets ───────────────────────────────────────────────────────
+    // Support tickets carry no userId, so they cannot be scoped to an
+    // owner: anyone signed in may open one, but only admins may read the
+    // queue or change its status.
+    match /tickets/{ticketId} {
+      allow read:   if isAdmin();
+      allow create: if isAuthed();
+      allow update, delete: if isAdmin();
+    }
+
+    // ── store_config ──────────────────────────────────────────────────
+    // Delivery fee and store settings are public-readable (needed at
+    // checkout) and admin-only writable.
+    match /store_config/{doc} {
+      allow read:  if true;
+      allow write: if isAdmin();
+    }
+  }
+}

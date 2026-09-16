@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../providers/cart_provider.dart';
 import '../providers/category_provider.dart';
 import '../providers/product_provider.dart';
 import '../widgets/product_card.dart';
@@ -32,7 +33,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final categories = ref.watch(categoriesProvider);
+    final categoriesAsync = ref.watch(categoriesStreamProvider);
     final featuredProducts = ref.watch(featuredProductsProvider);
 
     return Scaffold(
@@ -95,21 +96,44 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
             SizedBox(
               height: 120,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                itemCount: categories.length,
-                itemBuilder: (context, index) {
-                  final category = categories[index];
-                  return SizedBox(
-                    width: 150,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      child: CategoryCard(
-                        category: category,
-                        onTap: () => context.push('/category/${category.id}'),
+              child: categoriesAsync.when(
+                loading: () => const Center(
+                  child: SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ),
+                error: (error, _) => _CategoriesError(
+                  onRetry: () => ref.invalidate(categoriesStreamProvider),
+                ),
+                data: (loaded) {
+                  if (loaded.isEmpty) {
+                    return Center(
+                      child: Text(
+                        'No categories yet',
+                        style: TextStyle(color: Colors.grey[600]),
                       ),
-                    ),
+                    );
+                  }
+                  return ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    itemCount: loaded.length,
+                    itemBuilder: (context, index) {
+                      final category = loaded[index];
+                      return SizedBox(
+                        width: 150,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          child: CategoryCard(
+                            category: category,
+                            onTap: () =>
+                                context.push('/category/${category.id}'),
+                          ),
+                        ),
+                      );
+                    },
                   );
                 },
               ),
@@ -147,6 +171,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   product: product,
                   onTap: () => context.push('/product/${product.id}'),
                   onAddToCart: () {
+                    final unit = product.availableUnits.isNotEmpty
+                        ? product.availableUnits.first
+                        : 'Yard';
+                    ref.read(cartProvider.notifier).addToCart(product, 1, unit);
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text('${product.name} added to cart'),
@@ -165,6 +193,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             const SizedBox(height: 16),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Compact error strip for the home screen's category carousel.
+class _CategoriesError extends StatelessWidget {
+  final VoidCallback onRetry;
+
+  const _CategoriesError({required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.cloud_off, size: 18, color: Colors.grey[600]),
+          const SizedBox(width: 8),
+          Text('Could not load categories',
+              style: TextStyle(color: Colors.grey[600])),
+          TextButton(onPressed: onRetry, child: const Text('Retry')),
+        ],
       ),
     );
   }

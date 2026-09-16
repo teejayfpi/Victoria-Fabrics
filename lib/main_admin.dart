@@ -1,19 +1,25 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'core/bootstrap.dart';
 import 'core/theme/app_theme.dart';
+import 'core/widgets/startup_error_screen.dart';
 import 'admin/router/admin_router.dart';
-import 'services/firestore_service.dart';
 import 'services/notification_service.dart';
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
-  await NotificationService.instance.init();
-  await FirestoreService.instance.seedProductsIfEmpty();
-  _startAdminListeners();
-  runApp(const ProviderScope(child: VictoriaFabricsAdminApp()));
+Future<void> main() async {
+  final binding = WidgetsFlutterBinding.ensureInitialized();
+  FlutterNativeSplash.preserve(widgetsBinding: binding);
+
+  final result = await bootstrap();
+  if (result.ok) _startAdminListeners();
+
+  runApp(
+    ProviderScope(
+      child: VictoriaFabricsAdminApp(startupError: result.error),
+    ),
+  );
 }
 
 /// Firestore listeners that fire a sound notification whenever:
@@ -39,6 +45,8 @@ void _startAdminListeners() {
         body: '${newOrders.length} new order(s) waiting for your attention.',
       );
     }
+  }, onError: (Object e) {
+    debugPrint('[Victoria Fabrics] orders listener error: $e');
   });
 
   FirebaseFirestore.instance
@@ -57,14 +65,28 @@ void _startAdminListeners() {
         body: 'A customer needs help. Tap to view.',
       );
     }
+  }, onError: (Object e) {
+    debugPrint('[Victoria Fabrics] tickets listener error: $e');
   });
 }
 
 class VictoriaFabricsAdminApp extends StatelessWidget {
-  const VictoriaFabricsAdminApp({super.key});
+  /// Non-null when backend initialisation failed.
+  final Object? startupError;
+
+  const VictoriaFabricsAdminApp({super.key, this.startupError});
 
   @override
   Widget build(BuildContext context) {
+    if (startupError != null) {
+      return MaterialApp(
+        title: 'Victoria Fabrics Admin',
+        theme: AppTheme.lightTheme,
+        debugShowCheckedModeBanner: false,
+        home: StartupErrorScreen(error: startupError),
+      );
+    }
+
     return MaterialApp.router(
       title: 'Victoria Fabrics Admin',
       theme: AppTheme.lightTheme,

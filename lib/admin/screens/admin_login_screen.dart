@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -30,22 +31,49 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
 
     setState(() => _isLoading = true);
 
-    final success = await ref.read(adminAuthProvider.notifier).login(
-          _emailController.text.trim(),
-          _passwordController.text,
-        );
+    String? message;
+    try {
+      await ref.read(adminAuthProvider.notifier).login(
+            _emailController.text.trim(),
+            _passwordController.text,
+          );
+      if (mounted) context.go('/admin');
+      return;
+    } on NotAnAdminException catch (e) {
+      message = e.toString();
+    } on FirebaseAuthException catch (e) {
+      message = _authMessage(e);
+    } catch (e) {
+      message = 'Sign-in failed. Please try again. ($e)';
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
 
-    setState(() => _isLoading = false);
-
-    if (success && mounted) {
-      context.go('/admin');
-    } else if (mounted) {
+    if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Invalid credentials. Please check your email and password.'),
+        SnackBar(
+          content: Text(message),
           backgroundColor: Colors.red,
         ),
       );
+    }
+  }
+
+  /// Turns Firebase error codes into something an operator can act on.
+  String _authMessage(FirebaseAuthException e) {
+    switch (e.code) {
+      case 'invalid-credential':
+      case 'wrong-password':
+      case 'user-not-found':
+        return 'Invalid email or password.';
+      case 'user-disabled':
+        return 'This admin account has been disabled.';
+      case 'too-many-requests':
+        return 'Too many attempts. Please wait a moment and try again.';
+      case 'network-request-failed':
+        return 'Network unavailable. Check your connection and try again.';
+      default:
+        return e.message ?? 'Sign-in failed (${e.code}).';
     }
   }
 

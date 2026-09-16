@@ -8,7 +8,8 @@ plugins {
 
 android {
     namespace = "com.fabrichaven.fabric_haven"
-    compileSdk = 34
+    // flutter_plugin_android_lifecycle requires 35; 34 produced a Gradle warning
+    compileSdk = 35
     ndkVersion = flutter.ndkVersion
 
     compileOptions {

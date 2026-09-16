@@ -461,9 +461,9 @@ class _AdminAddProductScreenState extends ConsumerState<AdminAddProductScreen> {
           // Newly picked images (not yet uploaded)
           ..._newImages.asMap().entries.map((entry) {
             return _ImageTile(
-              child: Image.file(File(entry.value.path), fit: BoxFit.cover),
               onRemove: () => setState(() => _newImages.removeAt(entry.key)),
               badge: const Icon(Icons.upload, size: 16, color: Colors.white),
+              child: Image.file(File(entry.value.path), fit: BoxFit.cover),
             );
           }),
         ],

@@ -15,11 +15,18 @@ class AdminSplashScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isLoggedIn = ref.watch(isAdminLoggedInProvider);
+    // Wait for the persisted session to resolve before choosing a
+    // destination; otherwise a returning admin is bounced to the login screen.
+    final restored = ref.watch(adminSessionRestoreProvider);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!context.mounted) return;
-      context.go(isLoggedIn ? '/admin' : '/admin/login');
+      restored.when(
+        loading: () {},
+        error: (_, __) => context.go('/admin/login'),
+        data: (admin) =>
+            context.go(admin == null ? '/admin/login' : '/admin'),
+      );
     });
 
     return const Scaffold(

@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart' hide Order;
+import '../domain/entities/category.dart';
 import '../domain/entities/order.dart';
 import '../domain/entities/product.dart';
 import '../domain/entities/ticket.dart';
@@ -99,9 +100,66 @@ class FirestoreService {
     await _db.collection('tickets').doc(id).update({'status': status});
   }
 
-  // ─── Seed ─────────────────────────────────────────────────────────
+  // ─── Categories ───────────────────────────────────────────────────
+
+  Stream<List<Category>> categoriesStream() {
+    return _db.collection('categories').snapshots().map((snap) {
+      final categories =
+          snap.docs.map((d) => Category.fromMap(d.id, d.data())).toList();
+      categories.sort((a, b) => a.name.compareTo(b.name));
+      return categories;
+    });
+  }
+
+  Future<void> addCategory(Category category) async {
+    await _db.collection('categories').doc(category.id).set(category.toMap());
+  }
+
+  Future<void> updateCategory(Category category) async {
+    await _db
+        .collection('categories')
+        .doc(category.id)
+        .update(category.toMap());
+  }
+
+  Future<void> deleteCategory(String id) async {
+    await _db.collection('categories').doc(id).delete();
+  }
+
+  // ─── Users ────────────────────────────────────────────────────────
+
+  /// Role recorded in the user's Firestore document, or null when the user
+  /// has no document or no role set. Mirrors the `isAdmin()` helper in
+  /// firestore.rules so client and server agree on who is an admin.
+  Future<String?> getUserRole(String uid) async {
+    final snap = await _db.collection('users').doc(uid).get();
+    return snap.data()?['role'] as String?;
+  }
+
+  /// Creates the user document on first sign-in. The `role` field is
+  /// deliberately omitted — customers must never be able to self-promote,
+  /// and firestore.rules rejects a create that includes it.
+  Future<void> ensureUserDocument({
+    required String uid,
+    required String name,
+    String? email,
+  }) async {
+    final ref = _db.collection('users').doc(uid);
+    final snap = await ref.get();
+    if (snap.exists) return;
+
+    await ref.set({
+      'name': name,
+      if (email != null) 'email': email,
+      'updatedAt': Timestamp.now(),
+    });
+  }
+
+  // ─── Seed ──────────────────────────────────────────────────────────
 
   Future<void> seedProductsIfEmpty() async {
+    await _seedCategoriesIfEmpty();
+
     final snap = await _db.collection('products').limit(1).get();
     if (snap.docs.isNotEmpty) return;
 
@@ -110,6 +168,20 @@ class FirestoreService {
       final data = product.toMap()
         ..['createdAt'] = Timestamp.now();
       batch.set(_db.collection('products').doc(product.id), data);
+    }
+    await batch.commit();
+  }
+
+  Future<void> _seedCategoriesIfEmpty() async {
+    final snap = await _db.collection('categories').limit(1).get();
+    if (snap.docs.isNotEmpty) return;
+
+    final batch = _db.batch();
+    for (final category in MockDataSource.categories) {
+      batch.set(
+        _db.collection('categories').doc(category.id),
+        category.toMap(),
+      );
     }
     await batch.commit();
   }

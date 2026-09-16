@@ -1,0 +1,25 @@
+{
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "victoria-fabrics",
+          "appId": "1:1010144166475:android:27384e1b5bc8721b02c3ce",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "victoria-fabrics",
+          "configurations": {
+            "android": "1:1010144166475:android:27384e1b5bc8721b02c3ce"
+          }
+        }
+      }
+    }
+  }
+}

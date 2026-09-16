@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/entities/cart_item.dart';
 import '../../domain/entities/product.dart';
@@ -26,7 +27,7 @@ class CartNotifier extends StateNotifier<List<CartItem>> {
         CartItem(product: product, quantity: quantity, selectedUnit: unit),
       ];
     }
-    print('[Fabric Haven] Added to cart: ${product.name} x$quantity $unit');
+    debugPrint('[Victoria Fabrics] Added to cart: ${product.name} x$quantity $unit');
   }
 
   void removeFromCart(String productId, String unit) {
@@ -57,7 +58,7 @@ class CartNotifier extends StateNotifier<List<CartItem>> {
 
   void clearCart() {
     state = [];
-    print('[Fabric Haven] Cart cleared');
+    debugPrint('[Victoria Fabrics] Cart cleared');
   }
 
   int get totalItems => state.fold(0, (sum, item) => sum + item.quantity);
