@@ -70,3 +70,8 @@ service-account*.json
 serviceaccount*.json
 **/sa-key*.json
 .google-credentials/
+
+# Release signing material — see android/key.properties.example
+android/key.properties
+android/*.keystore
+android/*.jks

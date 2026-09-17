@@ -51,14 +51,24 @@ changing an order status requires that role, so an admin account must exist:
 1. Create the user in Firebase Auth.
 2. Add `users/{uid}` with `role: "admin"`.
 
-**Android signing.** `google-services.json` registers an OAuth client for a different
-debug keystore SHA-1 (`a029a10f…`) than the one in this environment (`18bbb7f8…`), so
-Google sign-in returns a developer-error dialog here. The customer app signs in with a
-Firebase Auth user; add the local keystore SHA-1 in the Firebase console to test Google
-sign-in on this machine. Release builds are still signed with the debug key — configure a
-real upload key before publishing.
+**Android signing.** `google-services.json` registers one Android OAuth client, for
+SHA-1 `a029a10f…`. A debug keystore is generated on demand in this container, and its
+fingerprint changes whenever the container is recycled, so **every distinct environment
+needs its own SHA-1 registered** in the Firebase console before Google sign-in works
+there. The app surfaces this as a developer-error dialog rather than a crash.
+
+Release signing reads `android/key.properties` (gitignored; see
+`android/key.properties.example`). When that file is absent the release build falls back
+to the debug key so CI and fresh clones still build — but such an APK must not be
+published. Generate the upload keystore once and store it outside the repo: it cannot be
+regenerated, and Play rejects updates signed with a different key.
 
 **`lib/firebase_options.dart` covers Android only.** iOS/web need `flutterfire configure`.
+
+**Customer sign-in is Google-only.** `sign_in_screen.dart` exposes a single Google
+button. Abeni, the reference app, also had `signInWithEmailAndPassword` and
+`createUserWithEmailAndPassword`; port those across if email/password is wanted as a
+fallback.
 
 **Catalogue seeding is an explicit admin action.** `seedProductsIfEmpty()` now runs from
 the admin Products screen overflow menu rather than during startup, because the rules
