@@ -69,48 +69,61 @@ class CartItemWidget extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      _QuantityButton(
-                        icon: Icons.remove,
-                        onPressed: onDecrement,
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Text(
-                          '${item.quantity}',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
+                  // Scales down on narrow screens instead of overflowing the
+                  // fixed-size stepper controls.
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _QuantityButton(
+                          icon: Icons.remove,
+                          onPressed: onDecrement,
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          child: Text(
+                            '${item.quantity}',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
                           ),
                         ),
-                      ),
-                      _QuantityButton(
-                        icon: Icons.add,
-                        onPressed: onIncrement,
-                      ),
-                    ],
+                        _QuantityButton(
+                          icon: Icons.add,
+                          onPressed: onIncrement,
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.delete_outline, color: Colors.red),
-                  onPressed: onRemove,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  '₦${item.totalPrice.toStringAsFixed(0)}',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.secondaryColor,
-                    fontSize: 16,
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 104),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline, color: Colors.red),
+                    visualDensity: VisualDensity.compact,
+                    onPressed: onRemove,
                   ),
-                ),
-              ],
+                  const SizedBox(height: 8),
+                  Text(
+                    '₦${item.totalPrice.toStringAsFixed(0)}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.secondaryColor,
+                      fontSize: 16,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
