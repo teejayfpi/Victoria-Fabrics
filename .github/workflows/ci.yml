@@ -23,7 +23,7 @@ jobs:
         run: flutter pub get
         
       - name: Analyze code
-        run: flutter analyze
+        run: flutter analyze --fatal-infos
 
   test:
     name: Unit Tests

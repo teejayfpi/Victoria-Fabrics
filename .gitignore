@@ -41,6 +41,13 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Android signing material — never commit keys or their passwords
+/android/key.properties
+/android/app/key.properties
+*.jks
+*.keystore
+
 build/
 
 # Replit workspace files
