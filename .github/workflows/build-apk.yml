@@ -34,15 +34,22 @@ jobs:
         run: dart run flutter_native_splash:create
 
       - name: Decode release keystore
-        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+        # `secrets` is not allowed in a step-level `if`, so gate inside the
+        # script. Without the secret the build still works, signed with the
+        # debug key (see android/app/build.gradle).
         run: |
-          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/app/upload-keystore.jks
-          cat > android/key.properties <<EOF
+          if [ -n "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ]; then
+            echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/app/upload-keystore.jks
+            cat > android/key.properties <<EOF
           storePassword=${{ secrets.KEYSTORE_PASSWORD }}
           keyPassword=${{ secrets.KEY_PASSWORD }}
           keyAlias=${{ secrets.KEY_ALIAS }}
           storeFile=upload-keystore.jks
           EOF
+            echo "Release signing configured."
+          else
+            echo "ANDROID_KEYSTORE_BASE64 not set; release APK will be debug-signed."
+          fi
 
       - name: Build debug APK (customer)
         run: flutter build apk --debug --target lib/main.dart
@@ -92,15 +99,22 @@ jobs:
         run: dart run flutter_native_splash:create
 
       - name: Decode release keystore
-        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+        # `secrets` is not allowed in a step-level `if`, so gate inside the
+        # script. Without the secret the build still works, signed with the
+        # debug key (see android/app/build.gradle).
         run: |
-          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/app/upload-keystore.jks
-          cat > android/key.properties <<EOF
+          if [ -n "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ]; then
+            echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/app/upload-keystore.jks
+            cat > android/key.properties <<EOF
           storePassword=${{ secrets.KEYSTORE_PASSWORD }}
           keyPassword=${{ secrets.KEY_PASSWORD }}
           keyAlias=${{ secrets.KEY_ALIAS }}
           storeFile=upload-keystore.jks
           EOF
+            echo "Release signing configured."
+          else
+            echo "ANDROID_KEYSTORE_BASE64 not set; release APK will be debug-signed."
+          fi
 
       - name: Build debug APK (admin)
         run: flutter build apk --debug --target lib/main_admin.dart
