@@ -325,6 +325,26 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
           child: ElevatedButton(
             onPressed: product.inStock
                 ? () {
+                    final cart = ref.read(cartProvider);
+                    final alreadyInCart = cart.any(
+                      (item) =>
+                          item.product.id == product.id &&
+                          item.selectedUnit == _selectedUnit,
+                    );
+                    if (!alreadyInCart &&
+                        cart.length >= CartNotifier.maxLines) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Your cart is limited to ${CartNotifier.maxLines} items. '
+                            'Please remove one before adding another.',
+                          ),
+                          backgroundColor: Colors.orange,
+                        ),
+                      );
+                      return;
+                    }
+
                     ref.read(cartProvider.notifier).addToCart(
                       product,
                       _quantity,

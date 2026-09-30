@@ -50,11 +50,15 @@ than committing per-project copies.
 authorization server-side:
 
 - The catalogue (products and categories) is world-readable; only staff may
-  create/delete products or manage categories. Customers may only adjust
-  `stockCount`/`inStock` when placing an order.
-- Orders are created **only** by the `placeOrder` Cloud Function, which
-  re-derives prices, stock and the total server-side; clients can only read
-  their own orders and staff may advance status.
+  create/delete products or manage categories. A signed-in customer may only
+  *decrease* `stockCount`/`inStock` when placing an order through the
+  transaction fallback.
+- Orders are validated server-side. The rules require `status == 'pending'`, a
+  server timestamp, `userId == request.auth.uid`, and — critically — that
+  **every line item's price and line total match the authoritative product
+  document**. A client therefore cannot dictate its own price. Clients may
+  only read their own orders; staff may advance status; nobody may rewrite or
+  delete an order.
 - Tickets may be opened by anyone but only advanced by staff.
 - Admin roles come from a `role` custom claim or the `admins/{uid}` document,
   never from client input.
@@ -72,14 +76,34 @@ firebase deploy --only firestore:rules,firestore:indexes,storage
 > staff role; if you prefer to seed server-side, use the Admin SDK and the
 > `_meta` marker is respected either way.
 
-> Note: order integrity (price, stock and total) is enforced by the
-> `placeOrder` Cloud Function. Deploy it alongside the rules — see
-> [Cloud Functions](#cloud-functions) below.
+### Order integrity: two enforcement paths
+
+Order money/stock integrity is enforced in **two** places, so the app is
+secure whether or not you are on a paid plan:
+
+1. **`placeOrder` Cloud Function** (preferred). Re-derives prices, stock and
+   total with the Admin SDK. Requires the **Blaze** plan — Cloud Functions
+   cannot run on the free Spark plan.
+2. **Security-rules validation** (free-tier fallback). When functions are
+   unavailable the client places the order in a Firestore transaction and the
+   rules independently verify each line against the product document. The
+   rules engine allows 10 document lookups per request, so an order is capped
+   at 10 distinct lines (enforced in the cart UI).
+
+The client tries the function first and falls back only on a
+*configuration* error (function not deployed/unreachable). A genuine
+rejection from the server — stale total, out of stock, bad payload — is
+surfaced to the user and never silently retried on the weaker path.
+
+> The fallback is materially stronger than the original client-trusted code,
+> but the Cloud Function remains the strongest option: it is the only path
+> that also enforces per-product stock atomically. Deploy it when you can —
+> see [Cloud Functions](#cloud-functions) below.
 
 ## Cloud Functions
 
 `functions/` holds the trusted server-side logic (TypeScript, Node 20). It is
-the only place order money/stock integrity is enforced.
+the strongest place order money/stock integrity is enforced.
 
 | Function | Purpose |
 | --- | --- |
@@ -94,8 +118,9 @@ npm run lint          # type-check
 firebase deploy --only functions
 ```
 
-The client calls `placeOrder` through `cloud_functions`; the Firestore rules
-block direct client writes to `orders`.
+The client calls `placeOrder` through `cloud_functions` and falls back to the
+rules-validated transaction when it is not deployed; the Firestore rules block
+any direct client write that does not match the product catalogue.
 
 ## Project Structure
 
