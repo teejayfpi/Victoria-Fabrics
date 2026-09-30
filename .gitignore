@@ -75,3 +75,8 @@ functions/*.log
 !functions/package.json
 !functions/package-lock.json
 !functions/tsconfig.json
+
+# Never commit service-account keys or other credentials
+*-adminsdk-*.json
+*firebase-adminsdk*.json
+serviceAccount*.json
