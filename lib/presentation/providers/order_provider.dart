@@ -64,7 +64,6 @@ class OrderNotifier extends StateNotifier<AsyncValue<Order?>> {
             pickupLocation: pickupLocation,
             customerName: customerName,
             customerPhone: customerPhone,
-            userId: user?.uid,
           );
 
       final docId = result.fold(

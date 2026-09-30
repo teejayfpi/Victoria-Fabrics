@@ -75,27 +75,17 @@ service cloud.firestore {
     }
 
     // ─── Orders ─────────────────────────────────────────────────────────
+    // Orders are created exclusively by the `placeOrder` Cloud Function, which
+    // re-derives prices, stock and the total server-side (Admin SDK writes
+    // bypass these rules). Clients can only read their own orders.
     match /orders/{orderId} {
       // Staff see everything; a signed-in customer sees only their orders.
       allow read: if isStaff()
         || (isSignedIn() && resource.data.userId == request.auth.uid);
 
-      // Customers (and guests) may place orders, but the payload is pinned
-      // to a fresh pending order with the expected shape. Price integrity is
-      // enforced by the client transaction in FirestoreService.createOrder;
-      // move this to a Cloud Function for defence-in-depth against a
-      // tampered client.
-      allow create: if request.resource.data.status == 'pending'
-        && request.resource.data.totalAmount is number
-        && request.resource.data.customerName is string
-        && request.resource.data.customerPhone is string
-        && request.resource.data.keys().hasOnly([
-             'id', 'userId', 'items', 'totalAmount', 'deliveryType',
-             'deliveryAddress', 'pickupLocation', 'status', 'createdAt',
-             'customerName', 'customerPhone',
-           ]);
-
-      // Only staff may advance order status.
+      // No client-side writes: creation goes through the callable function,
+      // and only staff may advance order status.
+      allow create: if false;
       allow update, delete: if isStaff();
     }
 

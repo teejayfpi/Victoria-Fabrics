@@ -67,3 +67,11 @@ pnpm-lock.yaml
 pnpm-workspace.yaml
 tsconfig*.json
 .agents/
+
+# Cloud Functions build output and deps (keep the project manifest/config)
+functions/lib/
+functions/node_modules/
+functions/*.log
+!functions/package.json
+!functions/package-lock.json
+!functions/tsconfig.json

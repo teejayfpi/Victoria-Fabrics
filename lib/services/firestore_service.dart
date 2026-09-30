@@ -1,7 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart' hide Order;
+import 'package:cloud_functions/cloud_functions.dart';
 
 import '../core/config/app_config.dart';
 import '../core/logging/app_logger.dart';
+import '../data/mappers/place_order_payload.dart';
 import '../domain/entities/cart_item.dart';
 import '../domain/entities/category.dart';
 import '../domain/entities/order.dart';
@@ -125,16 +127,11 @@ class FirestoreService {
             snap.docs.map((doc) => Order.fromMap(doc.id, doc.data())).toList());
   }
 
-  /// Persists an order inside a transaction that:
-  /// 1. Re-reads each product's authoritative price and stock.
-  /// 2. Recomputes the total from server-side prices, rejecting any mismatch
-  ///    with the client-supplied amount.
-  /// 3. Decrements stock and flips `inStock` to false when it reaches zero.
+  /// Places an order through the `placeOrder` Cloud Function.
   ///
-  /// This closes the "tampered cart" class of attacks: a client can no longer
-  /// dictate what it pays, and concurrent orders cannot oversell stock.
-  ///
-  /// Returns the new document ID.
+  /// The server owns price, stock and total integrity — the client only sends
+  /// intent. [expectedTotal] is passed so the function can detect a stale cart.
+  /// Returns the new order's document id.
   Future<String> createOrder({
     required List<CartItem> items,
     required double expectedTotal,
@@ -143,107 +140,34 @@ class FirestoreService {
     String? pickupLocation,
     required String customerName,
     required String customerPhone,
-    String? userId,
   }) async {
     if (items.isEmpty) {
       throw StateError('Cannot create an order with no items');
     }
 
-    final orderRef = _orders.doc();
+    final callable = FirebaseFunctions.instance.httpsCallable('placeOrder');
+    final response = await callable.call<Map<String, dynamic>>(
+      buildPlaceOrderPayload(
+        items: items,
+        expectedTotal: expectedTotal,
+        deliveryType: deliveryType,
+        deliveryAddress: deliveryAddress,
+        pickupLocation: pickupLocation,
+        customerName: customerName,
+        customerPhone: customerPhone,
+      ),
+    );
 
-    await _db.runTransaction((txn) async {
-      // 1. Read every referenced product at its authoritative state.
-      final productRefs =
-          items.map((i) => _products.doc(i.product.id)).toList();
-      final snapshots = <DocumentSnapshot<Map<String, dynamic>>>[];
-      for (final ref in productRefs) {
-        snapshots.add(await txn.get(ref));
-      }
-
-      // 2. Validate availability and recompute the total from live prices.
-      var serverTotal = 0.0;
-      final lineItems = <Map<String, dynamic>>[];
-
-      for (var i = 0; i < items.length; i++) {
-        final item = items[i];
-        final snap = snapshots[i];
-        if (!snap.exists) {
-          throw StateError('Product ${item.product.id} is no longer available');
-        }
-        final product = Product.fromMap(snap.id, snap.data()!);
-        if (!product.inStock) {
-          throw StateError('${product.name} is out of stock');
-        }
-
-        final unitPrice = product.getPrice(item.selectedUnit);
-        if (unitPrice <= 0) {
-          throw StateError(
-              '${product.name} has no price for ${item.selectedUnit}');
-        }
-
-        final remaining = product.stockCount;
-        if (remaining != null && item.quantity > remaining) {
-          throw StateError(
-              'Only $remaining ${item.selectedUnit}(s) of ${product.name} left');
-        }
-
-        final lineTotal = unitPrice * item.quantity;
-        serverTotal += lineTotal;
-
-        lineItems.add({
-          'productId': product.id,
-          'productName': product.name,
-          'imageUrl':
-              product.imageUrls.isNotEmpty ? product.imageUrls.first : '',
-          'quantity': item.quantity,
-          'selectedUnit': item.selectedUnit,
-          'unitPrice': unitPrice,
-          'totalPrice': lineTotal,
-        });
-      }
-
-      if ((serverTotal - expectedTotal).abs() > 0.01) {
-        AppLogger.warning(
-          'Order total mismatch rejected',
-          tag: 'firestore',
-          context: {'expected': expectedTotal, 'server': serverTotal},
-        );
-        throw StateError('Order total changed. Please review your cart.');
-      }
-
-      // 3. Decrement stock for tracked products.
-      for (var i = 0; i < items.length; i++) {
-        final item = items[i];
-        final product = Product.fromMap(snapshots[i].id, snapshots[i].data()!);
-        final remaining = product.stockCount;
-        if (remaining == null) continue;
-        final next = remaining - item.quantity;
-        txn.update(productRefs[i], {
-          'stockCount': next,
-          'inStock': next > 0,
-        });
-      }
-
-      txn.set(orderRef, {
-        'id': orderRef.id.substring(0, 8).toUpperCase(),
-        if (userId != null) 'userId': userId,
-        'items': lineItems,
-        'totalAmount': serverTotal,
-        'deliveryType':
-            deliveryType == DeliveryType.delivery ? 'delivery' : 'pickup',
-        'deliveryAddress': deliveryAddress,
-        'pickupLocation': pickupLocation,
-        'status': OrderStatus.pending.name,
-        'createdAt': FieldValue.serverTimestamp(),
-        'customerName': customerName,
-        'customerPhone': customerPhone,
-      });
-    });
+    final data = response.data;
+    final orderId = data['orderId'] as String?;
+    if (orderId == null) {
+      throw StateError('Order was not confirmed by the server');
+    }
 
     AppLogger.info('Order created', tag: 'firestore', context: {
-      'orderId': orderRef.id,
+      'orderId': orderId,
     });
-    return orderRef.id;
+    return orderId;
   }
 
   Future<void> updateOrderStatus(String firestoreId, String status) async {

@@ -52,8 +52,9 @@ authorization server-side:
 - The catalogue (products and categories) is world-readable; only staff may
   create/delete products or manage categories. Customers may only adjust
   `stockCount`/`inStock` when placing an order.
-- Orders are readable by their owner or staff, created only in a `pending`
-  state with a validated shape, and updated/deleted only by staff.
+- Orders are created **only** by the `placeOrder` Cloud Function, which
+  re-derives prices, stock and the total server-side; clients can only read
+  their own orders and staff may advance status.
 - Tickets may be opened by anyone but only advanced by staff.
 - Admin roles come from a `role` custom claim or the `admins/{uid}` document,
   never from client input.
@@ -71,10 +72,30 @@ firebase deploy --only firestore:rules,firestore:indexes,storage
 > staff role; if you prefer to seed server-side, use the Admin SDK and the
 > `_meta` marker is respected either way.
 
-> Note: order total/price validation currently runs in a client-side Firestore
-> transaction (`FirestoreService.createOrder`). For defence-in-depth against a
-> tampered client, migrate that logic to a Cloud Function (Callable or a
-> Firestore trigger) and tighten the rules accordingly.
+> Note: order integrity (price, stock and total) is enforced by the
+> `placeOrder` Cloud Function. Deploy it alongside the rules — see
+> [Cloud Functions](#cloud-functions) below.
+
+## Cloud Functions
+
+`functions/` holds the trusted server-side logic (TypeScript, Node 20). It is
+the only place order money/stock integrity is enforced.
+
+| Function | Purpose |
+| --- | --- |
+| `placeOrder` | Authoritative order placement: re-reads product prices, recomputes the total, decrements stock and writes a pinned `pending` order. |
+| `setAdminRole` | Super-admin-only: grants/updates an admin role (custom claim + `admins/{uid}` roster). |
+| `removeAdminRole` | Super-admin-only: revokes an admin role. |
+
+```bash
+cd functions
+npm install
+npm run lint          # type-check
+firebase deploy --only functions
+```
+
+The client calls `placeOrder` through `cloud_functions`; the Firestore rules
+block direct client writes to `orders`.
 
 ## Project Structure
 
@@ -106,6 +127,9 @@ lib/
 │   ├── screens/           # Customer screens
 │   └── widgets/           # Reusable widgets
 └── services/              # Firebase-backed services (Firestore, auth, ...)
+
+functions/                 # Trusted server-side logic (TypeScript, Node 20)
+└── src/index.ts           # placeOrder, setAdminRole, removeAdminRole
 ```
 
 ## Architecture
