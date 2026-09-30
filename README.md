@@ -39,7 +39,34 @@ credentials in this repository** — never commit admin logins to source.
 
 ## Firebase
 
-The `google-services.json` is included at `android/app/google-services.json` for the Firebase project `victoria-fabrics`.
+The `google-services.json` is included at `android/app/google-services.json`
+for the Firebase project `victoria-fabrics`. Treat this file as environment
+configuration: in a multi-environment setup, inject it at build time rather
+than committing per-project copies.
+
+### Security rules
+
+`firestore.rules` and `storage.rules` are deny-by-default and enforce
+authorization server-side:
+
+- The catalogue is world-readable; only staff may create/delete products.
+  Customers may only adjust `stockCount`/`inStock` when placing an order.
+- Orders are readable by their owner or staff, created only in a `pending`
+  state with a validated shape, and updated/deleted only by staff.
+- Tickets may be opened by anyone but only advanced by staff.
+- Admin roles come from a `role` custom claim or the `admins/{uid}` document,
+  never from client input.
+
+Deploy them with the Firebase CLI:
+
+```bash
+firebase deploy --only firestore:rules,firestore:indexes,storage
+```
+
+> Note: order total/price validation currently runs in a client-side Firestore
+> transaction (`FirestoreService.createOrder`). For defence-in-depth against a
+> tampered client, migrate that logic to a Cloud Function (Callable or a
+> Firestore trigger) and tighten the rules accordingly.
 
 ## Project Structure
 
