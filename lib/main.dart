@@ -7,6 +7,7 @@ import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'core/config/app_config.dart';
 import 'core/constants/app_constants.dart';
 import 'core/logging/app_logger.dart';
+import 'core/providers/bootstrap_provider.dart';
 import 'core/theme/app_theme.dart';
 import 'presentation/router/app_router.dart';
 import 'services/notification_service.dart';
@@ -55,11 +56,13 @@ void main() {
   );
 }
 
-class VictoriaFabricsApp extends StatelessWidget {
+class VictoriaFabricsApp extends ConsumerWidget {
   const VictoriaFabricsApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Fire-and-forget catalogue bootstrap; the UI never blocks on it.
+    ref.listen(catalogueBootstrapProvider, (_, __) {});
     return MaterialApp.router(
       title: AppConstants.appName,
       theme: AppTheme.lightTheme,

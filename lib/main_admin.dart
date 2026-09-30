@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/config/app_config.dart';
 import 'core/constants/app_constants.dart';
 import 'core/logging/app_logger.dart';
+import 'core/providers/bootstrap_provider.dart';
 import 'core/theme/app_theme.dart';
 import 'admin/router/admin_router.dart';
 import 'services/notification_service.dart';
@@ -50,11 +51,12 @@ void main() {
   );
 }
 
-class VictoriaFabricsAdminApp extends StatelessWidget {
+class VictoriaFabricsAdminApp extends ConsumerWidget {
   const VictoriaFabricsAdminApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    ref.listen(catalogueBootstrapProvider, (_, __) {});
     return MaterialApp.router(
       title: '${AppConstants.appName} Admin',
       theme: AppTheme.lightTheme,

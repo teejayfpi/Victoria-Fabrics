@@ -55,6 +55,7 @@ class AppConfig {
 
   /// Firestore collection names, centralised so a rename is a one-line change.
   static const String productsCollection = 'products';
+  static const String categoriesCollection = 'categories';
   static const String ordersCollection = 'orders';
   static const String ticketsCollection = 'tickets';
   static const String usersCollection = 'users';

@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../data/repositories/category_repository.dart';
 import '../../data/repositories/order_repository.dart';
 import '../../data/repositories/product_repository.dart';
 import '../../services/firestore_service.dart';
@@ -11,6 +12,10 @@ final firestoreServiceProvider = Provider<FirestoreService>((ref) {
 
 final productRepositoryProvider = Provider<ProductRepository>((ref) {
   return ProductRepository(ref.watch(firestoreServiceProvider));
+});
+
+final categoryRepositoryProvider = Provider<CategoryRepository>((ref) {
+  return CategoryRepository(ref.watch(firestoreServiceProvider));
 });
 
 final orderRepositoryProvider = Provider<OrderRepository>((ref) {

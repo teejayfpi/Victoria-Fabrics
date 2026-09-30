@@ -5,12 +5,13 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:uuid/uuid.dart';
 import '../../core/error/error_mapper.dart';
+import '../../core/error/exceptions.dart';
 import '../../core/error/failures.dart';
 import '../../core/logging/app_logger.dart';
 import '../../core/providers/repository_providers.dart';
 import '../../core/theme/app_theme.dart';
-import '../../data/datasources/mock_data_source.dart';
 import '../../domain/entities/product.dart';
+import '../../presentation/providers/category_provider.dart';
 import '../../services/storage_service.dart';
 import '../providers/admin_auth_provider.dart';
 
@@ -193,8 +194,13 @@ class _AdminAddProductScreenState extends ConsumerState<AdminAddProductScreen> {
 
       final allImageUrls = [..._existingImageUrls, ...uploadedUrls];
 
-      final category = MockDataSource.categories
-          .firstWhere((c) => c.id == _selectedCategory!);
+      final category = ref.read(categoryByIdProvider(_selectedCategory!));
+      if (category == null) {
+        throw const ValidationException(
+          message: 'The selected category no longer exists. Please pick another.',
+          code: 'unknown-category',
+        );
+      }
 
       final product = Product(
         id: productId,
@@ -221,10 +227,9 @@ class _AdminAddProductScreenState extends ConsumerState<AdminAddProductScreen> {
       final result = await ref
           .read(productRepositoryProvider)
           .save(product, isNew: !isEditing);
-      result.fold(
-        onSuccess: (_) {},
-        onError: (failure) => throw Exception(failure.message),
-      );
+      if (result case Error<void>(failure: final failure)) {
+        throw AppException(message: failure.message, code: failure.code);
+      }
 
       AppLogger.info(isEditing ? 'Product updated' : 'Product created',
           tag: 'admin_products', context: {'id': productId});
@@ -259,6 +264,7 @@ class _AdminAddProductScreenState extends ConsumerState<AdminAddProductScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final categories = ref.watch(categoriesProvider);
     return Scaffold(
       appBar: AppBar(
         title: Text(isEditing ? 'Edit Product' : 'Add Product'),
@@ -307,7 +313,7 @@ class _AdminAddProductScreenState extends ConsumerState<AdminAddProductScreen> {
               DropdownButtonFormField<String>(
                 value: _selectedCategory,
                 decoration: const InputDecoration(labelText: 'Category *'),
-                items: MockDataSource.categories
+                items: categories
                     .map((cat) => DropdownMenuItem(
                           value: cat.id,
                           child: Text(cat.name),

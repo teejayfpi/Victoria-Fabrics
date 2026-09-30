@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart' hide Order;
 import '../core/config/app_config.dart';
 import '../core/logging/app_logger.dart';
 import '../domain/entities/cart_item.dart';
+import '../domain/entities/category.dart';
 import '../domain/entities/order.dart';
 import '../domain/entities/product.dart';
 import '../domain/entities/ticket.dart';
@@ -22,6 +23,8 @@ class FirestoreService {
       _db.collection(AppConfig.ordersCollection);
   CollectionReference<Map<String, dynamic>> get _tickets =>
       _db.collection(AppConfig.ticketsCollection);
+  CollectionReference<Map<String, dynamic>> get _categories =>
+      _db.collection(AppConfig.categoriesCollection);
 
   // ─── Products ─────────────────────────────────────────────────────
 
@@ -48,6 +51,53 @@ class FirestoreService {
     final doc = await _products.doc(id).get();
     if (!doc.exists) return null;
     return Product.fromMap(doc.id, doc.data()!);
+  }
+
+  // ─── Categories ───────────────────────────────────────────────────
+
+  Stream<List<Category>> categoriesStream() {
+    return _categories
+        .orderBy('name')
+        .snapshots()
+        .map((snap) => snap.docs
+            .map((doc) => Category.fromMap(doc.id, doc.data()))
+            .toList());
+  }
+
+  Future<void> addCategory(Category category) async {
+    await _categories.doc(category.id).set({
+      ...category.toMap(),
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Future<void> updateCategory(Category category) async {
+    await _categories.doc(category.id).update(category.toMap());
+  }
+
+  Future<void> deleteCategory(String id) async {
+    await _categories.doc(id).delete();
+  }
+
+  /// Seeds the category collection from the bundled defaults the first time
+  /// the app runs against an empty database.
+  Future<void> seedCategoriesIfEmpty() async {
+    final markerRef = _db.collection('_meta').doc('category_seed');
+    final existing = await _categories.limit(1).get();
+    if (existing.docs.isNotEmpty) return;
+
+    final marker = await markerRef.get();
+    if (marker.exists) return;
+
+    final batch = _db.batch();
+    for (final category in MockDataSource.categories) {
+      batch.set(_categories.doc(category.id), {
+        ...category.toMap(),
+        'createdAt': Timestamp.now(),
+      });
+    }
+    batch.set(markerRef, {'seededAt': FieldValue.serverTimestamp()});
+    await batch.commit();
   }
 
   // ─── Orders ───────────────────────────────────────────────────────

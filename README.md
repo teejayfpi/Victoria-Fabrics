@@ -49,19 +49,27 @@ than committing per-project copies.
 `firestore.rules` and `storage.rules` are deny-by-default and enforce
 authorization server-side:
 
-- The catalogue is world-readable; only staff may create/delete products.
-  Customers may only adjust `stockCount`/`inStock` when placing an order.
+- The catalogue (products and categories) is world-readable; only staff may
+  create/delete products or manage categories. Customers may only adjust
+  `stockCount`/`inStock` when placing an order.
 - Orders are readable by their owner or staff, created only in a `pending`
   state with a validated shape, and updated/deleted only by staff.
 - Tickets may be opened by anyone but only advanced by staff.
 - Admin roles come from a `role` custom claim or the `admins/{uid}` document,
   never from client input.
+- `_meta/*` holds write-once seeding markers so a first launch cannot clobber
+  existing catalogue data.
 
 Deploy them with the Firebase CLI:
 
 ```bash
 firebase deploy --only firestore:rules,firestore:indexes,storage
 ```
+
+> On first launch against an empty database the app seeds the bundled default
+> products and categories (best-effort, idempotent). Those writes require the
+> staff role; if you prefer to seed server-side, use the Admin SDK and the
+> `_meta` marker is respected either way.
 
 > Note: order total/price validation currently runs in a client-side Firestore
 > transaction (`FirestoreService.createOrder`). For defence-in-depth against a
@@ -111,8 +119,9 @@ keeps widgets free of Firebase specifics and makes the data layer testable.
   exception into a user-safe message.
 - **`core/logging`** — `AppLogger` is the single logging entry point. Avoid
   `print()` (enforced as an analyzer error).
-- **`data/repositories`** — products, orders and support tickets. Screens and
-  providers go through these rather than calling `FirestoreService` directly.
+- **`data/repositories`** — products, categories, orders and support tickets.
+  Screens and providers go through these rather than calling `FirestoreService`
+  directly.
 - **Authorization** — privileged admin actions call `requireAdmin(...)` with a
   minimum `AdminRole`, so authorization is checked in one place.
 
