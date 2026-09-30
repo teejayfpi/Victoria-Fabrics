@@ -1,12 +1,16 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/providers/repository_providers.dart';
 import '../../domain/entities/product.dart';
-import '../../services/firestore_service.dart';
 
 // ─── Firestore stream providers ───────────────────────────────────────────────
 
 final allProductsStreamProvider = StreamProvider<List<Product>>((ref) {
-  return FirestoreService.instance.productsStream();
+  return ref.watch(productRepositoryProvider).watchAll();
 });
+
+/// The catalogue with its loading/error states intact. Screens that need to
+/// distinguish "empty" from "still loading" should watch this directly.
+final productsAsyncProvider = allProductsStreamProvider;
 
 // Convenience sync provider — returns the current list (empty until loaded)
 final allProductsProvider = Provider<List<Product>>((ref) {

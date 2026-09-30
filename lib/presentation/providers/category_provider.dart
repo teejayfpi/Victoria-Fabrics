@@ -1,9 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/logging/app_logger.dart';
 import '../../data/datasources/mock_data_source.dart';
 import '../../domain/entities/category.dart';
 
 final categoriesProvider = Provider<List<Category>>((ref) {
-  print('[Fabric Haven] Loading categories...');
+  AppLogger.debug('Loading categories', tag: 'categories');
   return MockDataSource.categories;
 });
 

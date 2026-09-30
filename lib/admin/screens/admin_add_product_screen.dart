@@ -4,11 +4,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:uuid/uuid.dart';
+import '../../core/error/error_mapper.dart';
+import '../../core/error/failures.dart';
+import '../../core/logging/app_logger.dart';
+import '../../core/providers/repository_providers.dart';
 import '../../core/theme/app_theme.dart';
 import '../../data/datasources/mock_data_source.dart';
 import '../../domain/entities/product.dart';
-import '../../services/firestore_service.dart';
 import '../../services/storage_service.dart';
+import '../providers/admin_auth_provider.dart';
 
 class AdminAddProductScreen extends ConsumerStatefulWidget {
   /// Pass a full Product object (from the products list) when editing.
@@ -70,10 +74,23 @@ class _AdminAddProductScreenState extends ConsumerState<AdminAddProductScreen> {
   }
 
   Future<void> _loadFromFirestore(String id) async {
-    final p = await FirestoreService.instance.getProductById(id);
-    if (p != null && mounted) {
-      setState(() => _prefillFrom(p));
-    }
+    final result = await ref.read(productRepositoryProvider).getById(id);
+    result.fold(
+      onSuccess: (p) {
+        if (p != null && mounted) {
+          setState(() => _prefillFrom(p));
+        }
+      },
+      onError: (failure) {
+        AppLogger.warning('Could not load product $id',
+            tag: 'admin_products');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(failure.message)),
+          );
+        }
+      },
+    );
   }
 
   @override
@@ -163,6 +180,7 @@ class _AdminAddProductScreenState extends ConsumerState<AdminAddProductScreen> {
     setState(() => _isLoading = true);
 
     try {
+      requireAdmin(ref.read(currentAdminProvider), minimum: AdminRole.staff);
       final productId = _loadedProduct?.id ?? const Uuid().v4();
 
       // Upload new images to Firebase Storage
@@ -200,11 +218,16 @@ class _AdminAddProductScreenState extends ConsumerState<AdminAddProductScreen> {
         availableUnits: const ['Yard', 'Meter', 'Piece'],
       );
 
-      if (isEditing) {
-        await FirestoreService.instance.updateProduct(product);
-      } else {
-        await FirestoreService.instance.addProduct(product);
-      }
+      final result = await ref
+          .read(productRepositoryProvider)
+          .save(product, isNew: !isEditing);
+      result.fold(
+        onSuccess: (_) {},
+        onError: (failure) => throw Exception(failure.message),
+      );
+
+      AppLogger.info(isEditing ? 'Product updated' : 'Product created',
+          tag: 'admin_products', context: {'id': productId});
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -217,11 +240,12 @@ class _AdminAddProductScreenState extends ConsumerState<AdminAddProductScreen> {
         );
         context.pop();
       }
-    } catch (e) {
+    } catch (e, st) {
+      AppLogger.error('Product save failed', tag: 'admin_products', error: e);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: $e'),
+            content: Text(ErrorMapper.map(e, st).message),
             backgroundColor: Colors.red,
           ),
         );
@@ -461,9 +485,9 @@ class _AdminAddProductScreenState extends ConsumerState<AdminAddProductScreen> {
           // Newly picked images (not yet uploaded)
           ..._newImages.asMap().entries.map((entry) {
             return _ImageTile(
-              child: Image.file(File(entry.value.path), fit: BoxFit.cover),
               onRemove: () => setState(() => _newImages.removeAt(entry.key)),
               badge: const Icon(Icons.upload, size: 16, color: Colors.white),
+              child: Image.file(File(entry.value.path), fit: BoxFit.cover),
             );
           }),
         ],

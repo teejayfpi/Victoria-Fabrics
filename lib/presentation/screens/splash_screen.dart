@@ -104,7 +104,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       CurvedAnimation(parent: _loadingController, curve: Curves.easeInOut),
     );
 
-    _startAnimations();
+    unawaited(_startAnimations());
 
     _minDisplayTimer = Timer(_minDisplay, () {
       if (!mounted) return;
@@ -112,11 +112,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     });
   }
 
-  void _startAnimations() async {
-    _logoController.forward();
+  Future<void> _startAnimations() async {
+    unawaited(_logoController.forward());
     await Future.delayed(const Duration(milliseconds: 400));
     if (!mounted) return;
-    _textController.forward();
+    unawaited(_textController.forward());
   }
 
   @override

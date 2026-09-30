@@ -8,20 +8,32 @@ import '../providers/admin_auth_provider.dart';
 /// Branded launch screen for the admin app.
 ///
 /// Mirrors the customer splash so both apps feel like one product, then
-/// hands off to the dashboard or the login screen depending on whether an
-/// admin session already exists.
-class AdminSplashScreen extends ConsumerWidget {
+/// hands off to the dashboard or the login screen. On first build it attempts
+/// to restore a previously persisted admin session so staff are not forced to
+/// sign in on every launch.
+class AdminSplashScreen extends ConsumerStatefulWidget {
   const AdminSplashScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final isLoggedIn = ref.watch(isAdminLoggedInProvider);
+  ConsumerState<AdminSplashScreen> createState() => _AdminSplashScreenState();
+}
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!context.mounted) return;
-      context.go(isLoggedIn ? '/admin' : '/admin/login');
-    });
+class _AdminSplashScreenState extends ConsumerState<AdminSplashScreen> {
+  @override
+  void initState() {
+    super.initState();
+    _bootstrap();
+  }
 
+  Future<void> _bootstrap() async {
+    final restored =
+        await ref.read(adminAuthProvider.notifier).restoreSession();
+    if (!mounted) return;
+    context.go(restored ? '/admin' : '/admin/login');
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return const Scaffold(
       backgroundColor: AppColors.primaryDark,
       body: SafeArea(
