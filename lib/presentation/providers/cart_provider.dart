@@ -6,6 +6,12 @@ import '../../domain/entities/product.dart';
 class CartNotifier extends StateNotifier<List<CartItem>> {
   CartNotifier() : super([]);
 
+  /// Maximum number of distinct product/unit lines in one order. The order
+  /// security rules validate each line with a product lookup and the rules
+  /// engine allows 10 per request, so the ceiling is enforced here to give a
+  /// clear message rather than a permission denial at checkout.
+  static const int maxLines = 10;
+
   void addToCart(Product product, int quantity, String unit) {
     final existingIndex = state.indexWhere(
       (item) => item.product.id == product.id && item.selectedUnit == unit,
@@ -22,6 +28,14 @@ class CartNotifier extends StateNotifier<List<CartItem>> {
         ...state.sublist(existingIndex + 1),
       ];
     } else {
+      if (state.length >= maxLines) {
+        AppLogger.warning(
+          'Cart line limit reached',
+          tag: 'cart',
+          context: {'max': maxLines},
+        );
+        return;
+      }
       state = [
         ...state,
         CartItem(product: product, quantity: quantity, selectedUnit: unit),

@@ -1,7 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart' hide Order;
+import 'package:cloud_functions/cloud_functions.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../core/config/app_config.dart';
 import '../core/logging/app_logger.dart';
+import '../data/mappers/order_document.dart';
+import '../data/mappers/place_order_payload.dart';
 import '../domain/entities/cart_item.dart';
 import '../domain/entities/category.dart';
 import '../domain/entities/order.dart';
@@ -125,16 +129,17 @@ class FirestoreService {
             snap.docs.map((doc) => Order.fromMap(doc.id, doc.data())).toList());
   }
 
-  /// Persists an order inside a transaction that:
-  /// 1. Re-reads each product's authoritative price and stock.
-  /// 2. Recomputes the total from server-side prices, rejecting any mismatch
-  ///    with the client-supplied amount.
-  /// 3. Decrements stock and flips `inStock` to false when it reaches zero.
+  /// Places an order.
   ///
-  /// This closes the "tampered cart" class of attacks: a client can no longer
-  /// dictate what it pays, and concurrent orders cannot oversell stock.
+  /// Preferred path is the `placeOrder` Cloud Function, which re-derives price,
+  /// stock and total with the Admin SDK. When Cloud Functions are unavailable —
+  /// notably on the free Spark plan, which cannot run Cloud Functions — this
+  /// falls back to a Firestore transaction whose result the security rules
+  /// independently validate (see `firestore.rules`). In both paths the client
+  /// never dictates a price or total.
   ///
-  /// Returns the new document ID.
+  /// [expectedTotal] is only used to detect a stale cart.
+  /// Returns the new order's document id.
   Future<String> createOrder({
     required List<CartItem> items,
     required double expectedTotal,
@@ -143,13 +148,76 @@ class FirestoreService {
     String? pickupLocation,
     required String customerName,
     required String customerPhone,
-    String? userId,
   }) async {
     if (items.isEmpty) {
       throw StateError('Cannot create an order with no items');
     }
 
+    final payload = buildPlaceOrderPayload(
+      items: items,
+      expectedTotal: expectedTotal,
+      deliveryType: deliveryType,
+      deliveryAddress: deliveryAddress,
+      pickupLocation: pickupLocation,
+      customerName: customerName,
+      customerPhone: customerPhone,
+    );
+
+    try {
+      final callable = FirebaseFunctions.instance.httpsCallable('placeOrder');
+      final response =
+          await callable.call<Map<String, dynamic>>(payload);
+      final orderId = response.data['orderId'] as String?;
+      if (orderId == null) {
+        throw StateError('Order was not confirmed by the server');
+      }
+      AppLogger.info('Order created (function)', tag: 'firestore',
+          context: {'orderId': orderId});
+      return orderId;
+    } on FirebaseFunctionsException catch (e) {
+      // A rejected order (bad payload, stale total, out of stock) must surface
+      // to the user, not silently fall back to the weaker path.
+      if (_isConfigurationError(e)) {
+        AppLogger.warning(
+          'Cloud Functions unavailable, using rules-validated transaction',
+          tag: 'firestore',
+          context: {'code': e.code},
+        );
+        return _createOrderInTransaction(
+          items: items,
+          expectedTotal: expectedTotal,
+          deliveryType: deliveryType,
+          deliveryAddress: deliveryAddress,
+          pickupLocation: pickupLocation,
+          customerName: customerName,
+          customerPhone: customerPhone,
+        );
+      }
+      AppLogger.error('placeOrder rejected', tag: 'firestore', error: e);
+      rethrow;
+    }
+  }
+
+  /// `not-found`/`unavailable` mean the function is not deployed or reachable,
+  /// as opposed to a validation failure the server deliberately returned.
+  bool _isConfigurationError(FirebaseFunctionsException e) {
+    return e.code == 'not-found' ||
+        e.code == 'unavailable' ||
+        e.code == 'internal' ||
+        e.code == 'failed-precondition';
+  }
+
+  Future<String> _createOrderInTransaction({
+    required List<CartItem> items,
+    required double expectedTotal,
+    required DeliveryType deliveryType,
+    String? deliveryAddress,
+    String? pickupLocation,
+    required String customerName,
+    required String customerPhone,
+  }) async {
     final orderRef = _orders.doc();
+    final userId = FirebaseAuth.instance.currentUser?.uid;
 
     await _db.runTransaction((txn) async {
       // 1. Read every referenced product at its authoritative state.
@@ -187,19 +255,9 @@ class FirestoreService {
               'Only $remaining ${item.selectedUnit}(s) of ${product.name} left');
         }
 
-        final lineTotal = unitPrice * item.quantity;
-        serverTotal += lineTotal;
-
-        lineItems.add({
-          'productId': product.id,
-          'productName': product.name,
-          'imageUrl':
-              product.imageUrls.isNotEmpty ? product.imageUrls.first : '',
-          'quantity': item.quantity,
-          'selectedUnit': item.selectedUnit,
-          'unitPrice': unitPrice,
-          'totalPrice': lineTotal,
-        });
+        final lineItem = buildOrderLineItem(product: product, item: item);
+        serverTotal += lineItem['totalPrice'] as double;
+        lineItems.add(lineItem);
       }
 
       if ((serverTotal - expectedTotal).abs() > 0.01) {
@@ -224,25 +282,24 @@ class FirestoreService {
         });
       }
 
-      txn.set(orderRef, {
-        'id': orderRef.id.substring(0, 8).toUpperCase(),
-        if (userId != null) 'userId': userId,
-        'items': lineItems,
-        'totalAmount': serverTotal,
-        'deliveryType':
-            deliveryType == DeliveryType.delivery ? 'delivery' : 'pickup',
-        'deliveryAddress': deliveryAddress,
-        'pickupLocation': pickupLocation,
-        'status': OrderStatus.pending.name,
-        'createdAt': FieldValue.serverTimestamp(),
-        'customerName': customerName,
-        'customerPhone': customerPhone,
-      });
+      txn.set(
+        orderRef,
+        buildOrderDocument(
+          shortId: orderRef.id.substring(0, 8).toUpperCase(),
+          userId: userId,
+          lineItems: lineItems,
+          totalAmount: orderTotal(lineItems),
+          deliveryType: deliveryType,
+          deliveryAddress: deliveryAddress,
+          pickupLocation: pickupLocation,
+          customerName: customerName,
+          customerPhone: customerPhone,
+        ),
+      );
     });
 
-    AppLogger.info('Order created', tag: 'firestore', context: {
-      'orderId': orderRef.id,
-    });
+    AppLogger.info('Order created (transaction)', tag: 'firestore',
+        context: {'orderId': orderRef.id});
     return orderRef.id;
   }
 

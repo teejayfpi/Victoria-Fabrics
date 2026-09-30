@@ -1,12 +1,19 @@
 import 'package:flutter/material.dart';
 
+import 'app_colors.dart';
+
+/// App-wide theme.
+///
+/// Colours are sourced from [AppColors] so there is a single palette: the app
+/// previously shipped a purple theme here while the splash screens used the
+/// emerald design system, so launch and the screens behind it disagreed.
 class AppTheme {
-  static const Color primaryColor = Color(0xFF6750A4);
-  static const Color secondaryColor = Color(0xFFFF7043);
-  static const Color backgroundColor = Color(0xFFFFF8E1);
-  static const Color surfaceColor = Colors.white;
-  static const Color textColor = Color(0xFF3E2723);
-  static const Color errorColor = Color(0xFFB00020);
+  static const Color primaryColor = AppColors.primary;
+  static const Color secondaryColor = AppColors.accent;
+  static const Color backgroundColor = AppColors.background;
+  static const Color surfaceColor = AppColors.surface;
+  static const Color textColor = AppColors.textPrimary;
+  static const Color errorColor = AppColors.error;
 
   static ThemeData get lightTheme {
     return ThemeData(
@@ -21,7 +28,7 @@ class AppTheme {
       scaffoldBackgroundColor: backgroundColor,
       appBarTheme: const AppBarTheme(
         backgroundColor: primaryColor,
-        foregroundColor: Colors.white,
+        foregroundColor: AppColors.textOnPrimary,
         elevation: 0,
         centerTitle: true,
       ),
@@ -35,7 +42,7 @@ class AppTheme {
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: primaryColor,
-          foregroundColor: Colors.white,
+          foregroundColor: AppColors.textOnPrimary,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
@@ -44,26 +51,27 @@ class AppTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: Colors.white,
+        fillColor: surfaceColor,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
           borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: Colors.grey.shade300),
+          borderSide: const BorderSide(color: AppColors.inputBorder),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: primaryColor, width: 2),
+          borderSide: const BorderSide(color: AppColors.inputFocus, width: 2),
         ),
       ),
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
         backgroundColor: surfaceColor,
         selectedItemColor: primaryColor,
-        unselectedItemColor: Colors.grey,
+        unselectedItemColor: AppColors.textMuted,
         type: BottomNavigationBarType.fixed,
       ),
+      dividerTheme: const DividerThemeData(color: AppColors.divider),
       textTheme: const TextTheme(
         headlineLarge: TextStyle(
           color: textColor,

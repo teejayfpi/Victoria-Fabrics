@@ -47,6 +47,19 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   Future<void> _placeOrder() async {
     if (!_formKey.currentState!.validate()) return;
 
+    // Orders are tied to an account: the security rules require the order to
+    // belong to the signed-in caller, so a guest cannot place one.
+    if (ref.read(currentUserProvider) == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please sign in to place your order.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      context.go('/signin');
+      return;
+    }
+
     final cartItems = ref.read(cartProvider);
     final totalAmount = ref.read(cartTotalProvider);
 

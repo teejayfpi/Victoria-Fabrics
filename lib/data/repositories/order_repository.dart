@@ -32,7 +32,6 @@ class OrderRepository {
     String? pickupLocation,
     required String customerName,
     required String customerPhone,
-    String? userId,
   }) {
     return guard(
       () => _firestore.createOrder(
@@ -45,7 +44,6 @@ class OrderRepository {
         pickupLocation: pickupLocation,
         customerName: customerName.trim(),
         customerPhone: Validators.normalisePhone(customerPhone),
-        userId: userId,
       ),
       tag: 'order_repo',
     );

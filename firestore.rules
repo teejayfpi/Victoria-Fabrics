@@ -39,16 +39,78 @@ service cloud.firestore {
             || ((adminRole() == null) && hasAdminDoc()));
     }
 
+    // ─── Order integrity helpers ────────────────────────────────────────
+    // Rules cannot loop, so line validation is unrolled. Each line costs one
+    // get(), and the engine allows 10 per request (cached repeats are free),
+    // hence the 10-item ceiling.
+
+    function unitPriceFor(product, unit) {
+      return unit == 'Yard'
+          ? product.pricePerYard
+          : unit == 'Meter'
+              ? product.pricePerMeter
+              : product.pricePerPiece;
+    }
+
+    // A line is valid only if its price and line total match the authoritative
+    // product document. This is what stops a client dictating its own price.
+    function lineMatchesProduct(line) {
+      return line.quantity is int
+        && line.quantity > 0
+        && line.quantity <= 1000
+        && line.selectedUnit in ['Yard', 'Meter', 'Piece']
+        && line.unitPrice is number
+        && line.unitPrice > 0
+        && line.unitPrice == unitPriceFor(
+             get(/databases/$(database)/documents/products/$(line.productId)).data,
+             line.selectedUnit)
+        && line.totalPrice is number
+        && line.totalPrice == line.unitPrice * line.quantity;
+    }
+
+    function orderLinesValid(items) {
+      return items.size() >= 1
+        && items.size() <= 10
+        && lineMatchesProduct(items[0])
+        && (items.size() <= 1 || lineMatchesProduct(items[1]))
+        && (items.size() <= 2 || lineMatchesProduct(items[2]))
+        && (items.size() <= 3 || lineMatchesProduct(items[3]))
+        && (items.size() <= 4 || lineMatchesProduct(items[4]))
+        && (items.size() <= 5 || lineMatchesProduct(items[5]))
+        && (items.size() <= 6 || lineMatchesProduct(items[6]))
+        && (items.size() <= 7 || lineMatchesProduct(items[7]))
+        && (items.size() <= 8 || lineMatchesProduct(items[8]))
+        && (items.size() <= 9 || lineMatchesProduct(items[9]));
+    }
+
+    // The client may not choose its own status, backdate the order, or place it
+    // on behalf of another account.
+    function orderShapeValid() {
+      return request.resource.data.status == 'pending'
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.deliveryType in ['delivery', 'pickup']
+        && request.resource.data.totalAmount is number
+        && request.resource.data.totalAmount > 0
+        && request.resource.data.customerName is string
+        && request.resource.data.customerPhone is string;
+    }
+
     // ─── Products ───────────────────────────────────────────────────────
-    // Public catalogue. Staff may edit anything; a customer placing an order
-    // may only adjust the stock counters (never price or name). Full
-    // integrity requires a Cloud Function — see the note in README.
+    // Public catalogue. Staff may edit anything. A signed-in customer placing
+    // an order through the transaction fallback may only *decrease* the stock
+    // counters — never price, name, or availability-inflating values. (The
+    // `placeOrder` function path uses the Admin SDK and bypasses this.)
     match /products/{productId} {
       allow read: if true;
       allow create, delete: if isStaff();
       allow update: if isStaff()
-        || request.resource.data.diff(resource.data).affectedKeys()
-             .hasOnly(['stockCount', 'inStock']);
+        || (isSignedIn()
+            && request.resource.data.diff(resource.data).affectedKeys()
+                 .hasOnly(['stockCount', 'inStock'])
+            && request.resource.data.stockCount is int
+            && resource.data.stockCount is int
+            && request.resource.data.stockCount < resource.data.stockCount);
     }
 
     // ─── Categories ─────────────────────────────────────────────────────
@@ -75,28 +137,25 @@ service cloud.firestore {
     }
 
     // ─── Orders ─────────────────────────────────────────────────────────
+    // Two creation paths, both integrity-checked server-side:
+    //   * the `placeOrder` Cloud Function (Admin SDK writes bypass these
+    //     rules), and
+    //   * the client transaction used when functions are unavailable (free
+    //     Spark plan). That path is validated here: every line price must
+    //     match the authoritative product document, the status must be
+    //     `pending`, the timestamp must be the server time, and the order must
+    //     belong to the caller.
+    // Staff may advance status; nobody may rewrite or delete an order.
     match /orders/{orderId} {
       // Staff see everything; a signed-in customer sees only their orders.
       allow read: if isStaff()
         || (isSignedIn() && resource.data.userId == request.auth.uid);
 
-      // Customers (and guests) may place orders, but the payload is pinned
-      // to a fresh pending order with the expected shape. Price integrity is
-      // enforced by the client transaction in FirestoreService.createOrder;
-      // move this to a Cloud Function for defence-in-depth against a
-      // tampered client.
-      allow create: if request.resource.data.status == 'pending'
-        && request.resource.data.totalAmount is number
-        && request.resource.data.customerName is string
-        && request.resource.data.customerPhone is string
-        && request.resource.data.keys().hasOnly([
-             'id', 'userId', 'items', 'totalAmount', 'deliveryType',
-             'deliveryAddress', 'pickupLocation', 'status', 'createdAt',
-             'customerName', 'customerPhone',
-           ]);
+      allow create: if isSignedIn()
+        && orderShapeValid()
+        && orderLinesValid(request.resource.data.items);
 
-      // Only staff may advance order status.
-      allow update, delete: if isStaff();
+      allow update, delete: if false;
     }
 
     // ─── Support tickets ────────────────────────────────────────────────
