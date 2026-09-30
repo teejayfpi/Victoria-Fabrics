@@ -2,14 +2,29 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/theme/app_theme.dart';
+import '../../domain/entities/order.dart';
 import '../providers/admin_auth_provider.dart';
+import '../providers/admin_data_providers.dart';
+
+/// Formats a naira amount compactly for the stat tiles, e.g. `₦1.2M`.
+String _compactCurrency(double amount) {
+  if (amount >= 1000000) {
+    return '₦${(amount / 1000000).toStringAsFixed(1)}M';
+  }
+  if (amount >= 1000) {
+    return '₦${(amount / 1000).toStringAsFixed(1)}K';
+  }
+  return '₦${amount.toStringAsFixed(0)}';
+}
 
 class AdminDashboardScreen extends ConsumerWidget {
   const AdminDashboardScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final admin = ref.watch(adminAuthProvider);
+    final adminState = ref.watch(adminAuthProvider);
+    final admin = adminState.valueOrNull;
+    final stats = ref.watch(adminStatsProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -112,25 +127,25 @@ class AdminDashboardScreen extends ConsumerWidget {
               mainAxisSpacing: 12,
               crossAxisSpacing: 12,
               childAspectRatio: 1.3,
-              children: const [
+              children: [
                 _StatCard(
                     title: 'Total Products',
-                    value: 'Live',
+                    value: '${stats.productCount}',
                     icon: Icons.inventory_2,
                     color: Colors.blue),
                 _StatCard(
                     title: 'Pending Orders',
-                    value: 'Live',
+                    value: '${stats.pendingOrders}',
                     icon: Icons.pending_actions,
                     color: Colors.orange),
                 _StatCard(
-                    title: 'Today\'s Sales',
-                    value: 'Live',
+                    title: "Today's Sales",
+                    value: _compactCurrency(stats.todaySales),
                     icon: Icons.trending_up,
                     color: Colors.green),
                 _StatCard(
                     title: 'Open Tickets',
-                    value: 'Live',
+                    value: '${stats.openTickets}',
                     icon: Icons.confirmation_number,
                     color: Colors.purple),
               ],
@@ -198,7 +213,7 @@ class AdminDashboardScreen extends ConsumerWidget {
                     fontWeight: FontWeight.bold,
                     color: AppTheme.textColor)),
             const SizedBox(height: 12),
-            _RecentOrdersList(),
+            const _RecentOrdersList(),
           ],
         ),
       ),
@@ -213,33 +228,33 @@ class AdminDashboardScreen extends ConsumerWidget {
               BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => Container(
         padding: const EdgeInsets.all(16),
-        child: Column(
+        child: const Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Notifications',
+            Text('Notifications',
                 style: TextStyle(
                     fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             ListTile(
-              leading: const CircleAvatar(
+              leading: CircleAvatar(
                 backgroundColor: Colors.orange,
                 child: Icon(Icons.notifications,
                     color: Colors.white, size: 20),
               ),
-              title: const Text('New Order received'),
-              subtitle: const Text('2 minutes ago'),
+              title: Text('New Order received'),
+              subtitle: Text('2 minutes ago'),
             ),
             ListTile(
-              leading: const CircleAvatar(
+              leading: CircleAvatar(
                 backgroundColor: Colors.purple,
                 child: Icon(Icons.confirmation_number,
                     color: Colors.white, size: 20),
               ),
-              title: const Text('New support ticket'),
-              subtitle: const Text('15 minutes ago'),
+              title: Text('New support ticket'),
+              subtitle: Text('15 minutes ago'),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
           ],
         ),
       ),
@@ -345,32 +360,30 @@ class _QuickActionCard extends StatelessWidget {
   }
 }
 
-class _RecentOrdersList extends StatelessWidget {
+class _RecentOrdersList extends ConsumerWidget {
+  const _RecentOrdersList();
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(adminOrdersProvider);
+    final recent = (async.valueOrNull ?? const <AdminOrder>[])
+        .take(3)
+        .toList();
+
     return Card(
       child: Column(
         children: [
-          _OrderTile(
-              orderId: 'ORD-001',
-              customer: 'Adebayo Johnson',
-              amount: '₦125,000',
-              status: 'Pending',
-              statusColor: Colors.orange),
-          const Divider(height: 1),
-          _OrderTile(
-              orderId: 'ORD-002',
-              customer: 'Chioma Adekunle',
-              amount: '₦245,000',
-              status: 'Confirmed',
-              statusColor: Colors.blue),
-          const Divider(height: 1),
-          _OrderTile(
-              orderId: 'ORD-003',
-              customer: 'Emmanuel Obi',
-              amount: '₦45,000',
-              status: 'Delivered',
-              statusColor: Colors.green),
+          if (recent.isEmpty)
+            const ListTile(
+              title: Text('No orders yet',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.grey)),
+            )
+          else
+            for (var i = 0; i < recent.length; i++) ...[
+              if (i > 0) const Divider(height: 1),
+              _OrderTile(adminOrder: recent[i]),
+            ],
           const Divider(height: 1),
           ListTile(
             onTap: () => context.push('/admin/orders'),
@@ -387,45 +400,54 @@ class _RecentOrdersList extends StatelessWidget {
 }
 
 class _OrderTile extends StatelessWidget {
-  final String orderId;
-  final String customer;
-  final String amount;
-  final String status;
-  final Color statusColor;
+  const _OrderTile({required this.adminOrder});
 
-  const _OrderTile({
-    required this.orderId,
-    required this.customer,
-    required this.amount,
-    required this.status,
-    required this.statusColor,
-  });
+  final AdminOrder adminOrder;
+
+  Color _statusColor(OrderStatus status) {
+    switch (status) {
+      case OrderStatus.pending:
+        return Colors.orange;
+      case OrderStatus.confirmed:
+        return Colors.blue;
+      case OrderStatus.preparing:
+        return Colors.purple;
+      case OrderStatus.ready:
+        return Colors.teal;
+      case OrderStatus.delivered:
+        return Colors.green;
+      case OrderStatus.cancelled:
+        return Colors.red;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final order = adminOrder.order;
+    final statusColor = _statusColor(order.status);
+
     return ListTile(
       leading: CircleAvatar(
         backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
         child: const Icon(Icons.receipt,
             color: AppTheme.primaryColor, size: 18),
       ),
-      title: Text(orderId,
+      title: Text(order.reference,
           style: const TextStyle(fontWeight: FontWeight.w600)),
-      subtitle: Text(customer),
+      subtitle: Text(order.customerName),
       trailing: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          Text(amount,
+          Text('₦${order.totalAmount.toStringAsFixed(0)}',
               style: const TextStyle(fontWeight: FontWeight.bold)),
           Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
             decoration: BoxDecoration(
               color: statusColor.withOpacity(0.1),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Text(status,
+            child: Text(order.status.displayName,
                 style: TextStyle(
                     color: statusColor,
                     fontSize: 10,

@@ -321,14 +321,14 @@ class _BankTransferCard extends StatelessWidget {
           const SizedBox(height: 14),
           const Divider(),
           const SizedBox(height: 8),
-          _BankDetailRow(label: 'Bank', value: PaymentConstants.bankName),
+          const _BankDetailRow(label: 'Bank', value: PaymentConstants.bankName),
           const SizedBox(height: 6),
-          _BankDetailRow(
+          const _BankDetailRow(
             label: 'Account Name',
             value: PaymentConstants.accountName,
           ),
           const SizedBox(height: 6),
-          _BankDetailRow(
+          const _BankDetailRow(
             label: 'Account Number',
             value: PaymentConstants.accountNumber,
             copyable: true,

@@ -1,236 +1,231 @@
 import 'package:flutter/material.dart';
-import '../../core/theme/app_theme.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class AdminAnalyticsScreen extends StatelessWidget {
+import '../../core/theme/app_theme.dart';
+import '../providers/admin_analytics_providers.dart';
+import '../providers/admin_data_providers.dart';
+
+/// Palette used to colour category bars, cycled when there are more
+/// categories than colours.
+const _categoryPalette = <Color>[
+  Colors.red,
+  Colors.purple,
+  Colors.blue,
+  Colors.green,
+  Colors.orange,
+  Colors.teal,
+  Colors.indigo,
+  Colors.brown,
+];
+
+String _formatNaira(double amount) {
+  final whole = amount.toStringAsFixed(0);
+  final buffer = StringBuffer();
+  for (var i = 0; i < whole.length; i++) {
+    if (i > 0 && (whole.length - i) % 3 == 0) buffer.write(',');
+    buffer.write(whole[i]);
+  }
+  return '₦$buffer';
+}
+
+class AdminAnalyticsScreen extends ConsumerWidget {
   const AdminAnalyticsScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Analytics'),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Date range selector
-            Row(
-              children: [
-                Expanded(
-                  child: DropdownButtonFormField<String>(
-                    value: 'this_month',
-                    decoration: const InputDecoration(
-                      labelText: 'Time Period',
-                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    ),
-                    items: const [
-                      DropdownMenuItem(value: 'today', child: Text('Today')),
-                      DropdownMenuItem(value: 'this_week', child: Text('This Week')),
-                      DropdownMenuItem(value: 'this_month', child: Text('This Month')),
-                      DropdownMenuItem(value: 'this_year', child: Text('This Year')),
-                    ],
-                    onChanged: (value) {},
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final range = ref.watch(analyticsRangeProvider);
+    final asyncOrders = ref.watch(adminOrdersProvider);
+    final summary = ref.watch(analyticsSummaryProvider);
 
-            // Revenue card
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Colors.green[700]!, Colors.green[500]!],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(16),
-              ),
+    return Scaffold(
+      appBar: AppBar(title: const Text('Analytics')),
+      body: asyncOrders.isLoading && summary.orderCount == 0
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Row(
-                    children: [
-                      Icon(Icons.account_balance_wallet, color: Colors.white, size: 24),
-                      SizedBox(width: 8),
-                      Text(
-                        'Total Revenue',
-                        style: TextStyle(color: Colors.white70, fontSize: 14),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    '₦2,450,000',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
+                  // Date range selector
+                  DropdownButtonFormField<AnalyticsRange>(
+                    value: range,
+                    decoration: const InputDecoration(
+                      labelText: 'Time Period',
+                      contentPadding: EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
                     ),
+                    items: [
+                      for (final value in AnalyticsRange.values)
+                        DropdownMenuItem(
+                            value: value, child: Text(value.label)),
+                    ],
+                    onChanged: (value) {
+                      if (value != null) {
+                        ref.read(analyticsRangeProvider.notifier).state = value;
+                      }
+                    },
                   ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Row(
+                  const SizedBox(height: 24),
+
+                  // Revenue card
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [Colors.green[700]!, Colors.green[500]!],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Row(
                           children: [
-                            Icon(Icons.trending_up, color: Colors.white, size: 14),
-                            SizedBox(width: 4),
-                            Text('+12.5%', style: TextStyle(color: Colors.white, fontSize: 12)),
+                            Icon(Icons.account_balance_wallet,
+                                color: Colors.white, size: 24),
+                            SizedBox(width: 8),
+                            Text('Total Revenue',
+                                style: TextStyle(
+                                    color: Colors.white70, fontSize: 14)),
                           ],
                         ),
+                        const SizedBox(height: 8),
+                        Text(
+                          _formatNaira(summary.totalRevenue),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${summary.orderCount} orders · ${range.label}',
+                          style: const TextStyle(
+                              color: Colors.white70, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Stats grid
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _StatCard(
+                          title: 'Total Orders',
+                          value: '${summary.orderCount}',
+                          icon: Icons.shopping_bag,
+                          color: Colors.blue,
+                        ),
                       ),
-                      const SizedBox(width: 8),
-                      const Text('vs last month', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _StatCard(
+                          title: 'Avg Order Value',
+                          value: _formatNaira(summary.averageOrderValue),
+                          icon: Icons.receipt,
+                          color: Colors.purple,
+                        ),
+                      ),
                     ],
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _StatCard(
+                          title: 'Customers',
+                          value: '${summary.uniqueCustomers}',
+                          icon: Icons.person_add,
+                          color: Colors.orange,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _StatCard(
+                          title: 'Products Sold',
+                          value: '${summary.unitsSold}',
+                          icon: Icons.inventory,
+                          color: Colors.teal,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
 
-            // Stats grid
-            Row(
-              children: [
-                Expanded(
-                  child: _StatCard(
-                    title: 'Total Orders',
-                    value: '156',
-                    change: '+8%',
-                    icon: Icons.shopping_bag,
-                    color: Colors.blue,
+                  // Top selling products
+                  const Text(
+                    'Top Selling Products',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.textColor,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _StatCard(
-                    title: 'Avg Order Value',
-                    value: '₦15,700',
-                    change: '+5%',
-                    icon: Icons.receipt,
-                    color: Colors.purple,
+                  const SizedBox(height: 12),
+                  Card(
+                    child: Column(
+                      children: [
+                        if (summary.topProducts.isEmpty)
+                          const ListTile(
+                            title: Text('No sales in this period',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(color: Colors.grey)),
+                          )
+                        else
+                          for (var i = 0;
+                              i < summary.topProducts.length;
+                              i++) ...[
+                            if (i > 0) const Divider(height: 1),
+                            _TopProductTile(
+                                rank: i + 1, product: summary.topProducts[i]),
+                          ],
+                      ],
+                    ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: _StatCard(
-                    title: 'New Customers',
-                    value: '42',
-                    change: '+15%',
-                    icon: Icons.person_add,
-                    color: Colors.orange,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _StatCard(
-                    title: 'Products Sold',
-                    value: '312',
-                    change: '+10%',
-                    icon: Icons.inventory,
-                    color: Colors.teal,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
+                  const SizedBox(height: 24),
 
-            // Top selling products
-            const Text(
-              'Top Selling Products',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.textColor,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Card(
-              child: Column(
-                children: const [
-                  _TopProductTile(
-                    rank: 1,
-                    name: 'Royal Ankara Print',
-                    sales: 45,
-                    revenue: '₦202,500',
+                  // Sales by category
+                  const Text(
+                    'Sales by Category',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.textColor,
+                    ),
                   ),
-                  Divider(height: 1),
-                  _TopProductTile(
-                    rank: 2,
-                    name: 'French Lace Premium',
-                    sales: 32,
-                    revenue: '₦384,000',
-                  ),
-                  Divider(height: 1),
-                  _TopProductTile(
-                    rank: 3,
-                    name: 'Pure Silk Fabric',
-                    sales: 28,
-                    revenue: '₦420,000',
-                  ),
-                  Divider(height: 1),
-                  _TopProductTile(
-                    rank: 4,
-                    name: 'Classic Dutch Wax Ankara',
-                    sales: 24,
-                    revenue: '₦132,000',
-                  ),
-                  Divider(height: 1),
-                  _TopProductTile(
-                    rank: 5,
-                    name: 'Silk Chiffon Premium',
-                    sales: 18,
-                    revenue: '₦144,000',
+                  const SizedBox(height: 12),
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        children: [
+                          if (summary.categoryShares.isEmpty)
+                            const Text('No category sales yet',
+                                style: TextStyle(color: Colors.grey))
+                          else
+                            for (var i = 0;
+                                i < summary.categoryShares.length;
+                                i++) ...[
+                              if (i > 0) const SizedBox(height: 12),
+                              _CategorySalesBar(
+                                share: summary.categoryShares[i],
+                                color: _categoryPalette[
+                                    i % _categoryPalette.length],
+                              ),
+                            ],
+                        ],
+                      ),
+                    ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 24),
-
-            // Sales by category
-            const Text(
-              'Sales by Category',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.textColor,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    _CategorySalesBar(category: 'Ankara', percentage: 0.35, color: Colors.red),
-                    const SizedBox(height: 12),
-                    _CategorySalesBar(category: 'Lace', percentage: 0.28, color: Colors.purple),
-                    const SizedBox(height: 12),
-                    _CategorySalesBar(category: 'Silk', percentage: 0.20, color: Colors.blue),
-                    const SizedBox(height: 12),
-                    _CategorySalesBar(category: 'Cotton', percentage: 0.10, color: Colors.green),
-                    const SizedBox(height: 12),
-                    _CategorySalesBar(category: 'Others', percentage: 0.07, color: Colors.orange),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
@@ -238,14 +233,12 @@ class AdminAnalyticsScreen extends StatelessWidget {
 class _StatCard extends StatelessWidget {
   final String title;
   final String value;
-  final String change;
   final IconData icon;
   final Color color;
 
   const _StatCard({
     required this.title,
     required this.value,
-    required this.change,
     required this.icon,
     required this.color,
   });
@@ -258,41 +251,23 @@ class _StatCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: color.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(icon, color: color, size: 20),
-                ),
-                Text(
-                  change,
-                  style: const TextStyle(
-                    color: Colors.green,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icon, color: color, size: 20),
             ),
             const SizedBox(height: 12),
             Text(
               value,
               style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
+                  fontSize: 22, fontWeight: FontWeight.bold),
             ),
             Text(
               title,
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 12,
-              ),
+              style: TextStyle(color: Colors.grey[600], fontSize: 12),
             ),
           ],
         ),
@@ -303,16 +278,9 @@ class _StatCard extends StatelessWidget {
 
 class _TopProductTile extends StatelessWidget {
   final int rank;
-  final String name;
-  final int sales;
-  final String revenue;
+  final TopProduct product;
 
-  const _TopProductTile({
-    required this.rank,
-    required this.name,
-    required this.sales,
-    required this.revenue,
-  });
+  const _TopProductTile({required this.rank, required this.product});
 
   @override
   Widget build(BuildContext context) {
@@ -327,10 +295,11 @@ class _TopProductTile extends StatelessWidget {
           ),
         ),
       ),
-      title: Text(name, style: const TextStyle(fontWeight: FontWeight.w600)),
-      subtitle: Text('$sales sales'),
+      title:
+          Text(product.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+      subtitle: Text('${product.unitsSold} sold'),
       trailing: Text(
-        revenue,
+        _formatNaira(product.revenue),
         style: const TextStyle(
           fontWeight: FontWeight.bold,
           color: AppTheme.secondaryColor,
@@ -341,15 +310,10 @@ class _TopProductTile extends StatelessWidget {
 }
 
 class _CategorySalesBar extends StatelessWidget {
-  final String category;
-  final double percentage;
+  final CategoryShare share;
   final Color color;
 
-  const _CategorySalesBar({
-    required this.category,
-    required this.percentage,
-    required this.color,
-  });
+  const _CategorySalesBar({required this.share, required this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -359,16 +323,18 @@ class _CategorySalesBar extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(category, style: const TextStyle(fontWeight: FontWeight.w500)),
+            Text(share.category,
+                style: const TextStyle(fontWeight: FontWeight.w500)),
             Text(
-              '${(percentage * 100).toInt()}%',
-              style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.w600),
+              '${(share.share * 100).toStringAsFixed(0)}%',
+              style: TextStyle(
+                  color: Colors.grey[600], fontWeight: FontWeight.w600),
             ),
           ],
         ),
         const SizedBox(height: 4),
         LinearProgressIndicator(
-          value: percentage,
+          value: share.share,
           backgroundColor: Colors.grey[200],
           valueColor: AlwaysStoppedAnimation(color),
           minHeight: 8,

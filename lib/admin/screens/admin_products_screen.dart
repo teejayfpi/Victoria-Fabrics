@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/error/error_mapper.dart';
+import '../../core/error/failures.dart';
+import '../../core/logging/app_logger.dart';
+import '../../core/providers/repository_providers.dart';
 import '../../core/theme/app_theme.dart';
-import '../../data/datasources/mock_data_source.dart';
+import '../../domain/entities/category.dart';
 import '../../domain/entities/product.dart';
+import '../../presentation/providers/category_provider.dart';
 import '../../presentation/providers/product_provider.dart';
-import '../../services/firestore_service.dart';
+import '../providers/admin_auth_provider.dart';
 
 class AdminProductsScreen extends ConsumerStatefulWidget {
   const AdminProductsScreen({super.key});
@@ -23,6 +28,7 @@ class _AdminProductsScreenState
   @override
   Widget build(BuildContext context) {
     final productsAsync = ref.watch(allProductsStreamProvider);
+    final categories = ref.watch(categoriesProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -30,7 +36,7 @@ class _AdminProductsScreenState
         actions: [
           IconButton(
             icon: const Icon(Icons.filter_list),
-            onPressed: () => _showFilterDialog(context),
+            onPressed: () => _showFilterDialog(context, categories),
           ),
         ],
       ),
@@ -129,7 +135,7 @@ class _AdminProductsScreenState
     );
   }
 
-  void _showFilterDialog(BuildContext context) {
+  void _showFilterDialog(BuildContext context, List<Category> categories) {
     showModalBottomSheet(
       context: context,
       builder: (ctx) => Container(
@@ -153,7 +159,7 @@ class _AdminProductsScreenState
                     Navigator.pop(ctx);
                   },
                 ),
-                ...MockDataSource.categories.map((cat) => FilterChip(
+                ...categories.map((cat) => FilterChip(
                       label: Text(cat.name),
                       selected: _selectedCategory == cat.id,
                       onSelected: (selected) {
@@ -186,16 +192,37 @@ class _AdminProductsScreenState
           TextButton(
             onPressed: () async {
               Navigator.pop(ctx);
-              await FirestoreService.instance
-                  .deleteProduct(product.id);
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content:
-                        Text('${product.name} has been removed'),
-                    backgroundColor: Colors.red,
-                  ),
+              try {
+                requireAdmin(ref.read(currentAdminProvider),
+                    minimum: AdminRole.staff);
+                final result = await ref
+                    .read(productRepositoryProvider)
+                    .delete(product.id);
+                result.fold(
+                  onSuccess: (_) {},
+                  onError: (failure) => throw Exception(failure.message),
                 );
+                AppLogger.info('Product deleted',
+                    tag: 'admin_products', context: {'id': product.id});
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('${product.name} has been removed'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              } catch (e, st) {
+                AppLogger.error('Product delete failed',
+                    tag: 'admin_products', error: e);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(ErrorMapper.map(e, st).message),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
               }
             },
             style:

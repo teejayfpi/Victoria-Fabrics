@@ -1,8 +1,18 @@
+/// Application-wide, non-secret constants.
+///
+/// Domain enums (order status, delivery type, measurement units) live next to
+/// the entities they describe — see `lib/domain/entities/`. Credentials and
+/// environment-specific values belong in `AppConfig` (build-time) or Firestore,
+/// never here.
 class AppConstants {
+  AppConstants._();
+
   static const String appName = 'Victoria Fabrics';
-  static const String adminEmail = 'admin@victoriafabrics.com';
   static const String currencySymbol = '₦';
   static const String currencyCode = 'NGN';
+
+  /// Flat delivery fee in Naira, applied to delivery orders.
+  static const double deliveryFee = 2500;
 
   static const List<String> measurementUnits = ['Yard', 'Meter', 'Piece'];
 }
@@ -31,46 +41,6 @@ enum MeasurementUnit {
         return 'm';
       case MeasurementUnit.piece:
         return 'pc';
-    }
-  }
-}
-
-enum DeliveryType {
-  delivery,
-  pickup;
-
-  String get displayName {
-    switch (this) {
-      case DeliveryType.delivery:
-        return 'Delivery';
-      case DeliveryType.pickup:
-        return 'Pickup';
-    }
-  }
-}
-
-enum OrderStatus {
-  pending,
-  confirmed,
-  preparing,
-  ready,
-  delivered,
-  cancelled;
-
-  String get displayName {
-    switch (this) {
-      case OrderStatus.pending:
-        return 'Pending';
-      case OrderStatus.confirmed:
-        return 'Confirmed';
-      case OrderStatus.preparing:
-        return 'Preparing';
-      case OrderStatus.ready:
-        return 'Ready';
-      case OrderStatus.delivered:
-        return 'Delivered';
-      case OrderStatus.cancelled:
-        return 'Cancelled';
     }
   }
 }

@@ -30,23 +30,35 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
 
     setState(() => _isLoading = true);
 
-    final success = await ref.read(adminAuthProvider.notifier).login(
+    final result = await ref.read(adminAuthProvider.notifier).login(
           _emailController.text.trim(),
           _passwordController.text,
         );
 
+    if (!mounted) return;
     setState(() => _isLoading = false);
 
-    if (success && mounted) {
-      context.go('/admin');
-    } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Invalid credentials. Please check your email and password.'),
-          backgroundColor: Colors.red,
-        ),
-      );
+    switch (result) {
+      case AdminLoginResult.success:
+        context.go('/admin');
+      case AdminLoginResult.invalidCredentials:
+        _showError('Incorrect email or password.');
+      case AdminLoginResult.notAuthorised:
+        _showError(
+          'This account is not authorised for the admin portal.',
+        );
+      case AdminLoginResult.failed:
+        _showError('Sign-in failed. Please try again.');
     }
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+      ),
+    );
   }
 
   @override

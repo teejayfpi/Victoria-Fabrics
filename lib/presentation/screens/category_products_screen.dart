@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import '../providers/category_provider.dart';
 import '../providers/product_provider.dart';
 import '../widgets/product_card.dart';
-import '../../core/theme/app_theme.dart';
 
 class CategoryProductsScreen extends ConsumerWidget {
   final String categoryId;

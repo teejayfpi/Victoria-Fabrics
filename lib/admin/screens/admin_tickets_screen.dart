@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import '../../core/error/error_mapper.dart';
+import '../../core/error/failures.dart';
+import '../../core/logging/app_logger.dart';
+import '../../core/providers/repository_providers.dart';
 import '../../core/theme/app_theme.dart';
 import '../../domain/entities/ticket.dart';
-import '../../services/firestore_service.dart';
-
-final _ticketsProvider = StreamProvider<List<SupportTicket>>((ref) {
-  return FirestoreService.instance.ticketsStream();
-});
+import '../providers/admin_auth_provider.dart';
+import '../providers/admin_data_providers.dart';
 
 class AdminTicketsScreen extends ConsumerStatefulWidget {
   const AdminTicketsScreen({super.key});
@@ -34,7 +35,7 @@ class _AdminTicketsScreenState extends ConsumerState<AdminTicketsScreen>
 
   @override
   Widget build(BuildContext context) {
-    final ticketsAsync = ref.watch(_ticketsProvider);
+    final ticketsAsync = ref.watch(adminTicketsProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -104,7 +105,7 @@ class _TicketList extends StatelessWidget {
   }
 }
 
-class _TicketCard extends StatelessWidget {
+class _TicketCard extends ConsumerWidget {
   final SupportTicket ticket;
   const _TicketCard({required this.ticket});
 
@@ -134,20 +135,45 @@ class _TicketCard extends StatelessWidget {
     }
   }
 
-  Future<void> _updateStatus(BuildContext context, String newStatus) async {
-    await FirestoreService.instance.updateTicketStatus(ticket.id, newStatus);
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Ticket marked as ${newStatus.replaceAll('_', ' ')}'),
-          backgroundColor: Colors.green,
-        ),
+  Future<void> _updateStatus(
+    BuildContext context,
+    WidgetRef ref,
+    String newStatus,
+  ) async {
+    try {
+      requireAdmin(ref.read(currentAdminProvider));
+      final result = await ref
+          .read(orderRepositoryProvider)
+          .updateTicketStatus(ticket.id, newStatus);
+      result.fold(
+        onSuccess: (_) {},
+        onError: (failure) => throw Exception(failure.message),
       );
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content:
+                Text('Ticket marked as ${newStatus.replaceAll('_', ' ')}'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e, st) {
+      AppLogger.error('Ticket status update failed',
+          tag: 'admin_tickets', error: e, stackTrace: st);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(ErrorMapper.map(e, st).message),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final dateFormat = DateFormat('MMM dd, yyyy • hh:mm a');
     final color = _statusColor();
 
@@ -251,7 +277,7 @@ class _TicketCard extends StatelessWidget {
                   Expanded(
                     child: ElevatedButton(
                       onPressed: () =>
-                          _updateStatus(context, 'in_progress'),
+                          _updateStatus(context, ref, 'in_progress'),
                       style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.blue),
                       child: const Text('Start Working'),
@@ -263,7 +289,7 @@ class _TicketCard extends StatelessWidget {
                   Expanded(
                     child: ElevatedButton(
                       onPressed: () =>
-                          _updateStatus(context, 'resolved'),
+                          _updateStatus(context, ref, 'resolved'),
                       style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.green),
                       child: const Text('Mark Resolved'),
@@ -274,7 +300,7 @@ class _TicketCard extends StatelessWidget {
                 if (ticket.status != 'open')
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: () => _updateStatus(context, 'open'),
+                      onPressed: () => _updateStatus(context, ref, 'open'),
                       child: const Text('Reopen'),
                     ),
                   ),

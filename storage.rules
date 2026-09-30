@@ -1,0 +1,44 @@
+rules_version = '2';
+
+// Victoria Fabrics — Cloud Storage security rules.
+//
+// Product imagery lives under `products/{productId}/...` and is world
+// readable (the customer app displays it). Writes are restricted to staff
+// and to reasonable image sizes/content types.
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Storage rules cannot read Firestore, so staff status is derived from
+    // the `role` custom claim only. Admin accounts must therefore carry a
+    // role claim (set via the Admin SDK).
+    function isStaff() {
+      return isSignedIn()
+        && request.auth.token.role
+             in ['staff', 'admin', 'superAdmin', 'super_admin'];
+    }
+
+    function isImage() {
+      return request.resource.contentType.matches('image/.*');
+    }
+
+    // 5 MB ceiling on any single upload.
+    function withinSizeLimit() {
+      return request.resource.size < 5 * 1024 * 1024;
+    }
+
+    match /products/{productId}/{fileName} {
+      allow read: if true;
+      allow write: if isStaff() && isImage() && withinSizeLimit();
+      allow delete: if isStaff();
+    }
+
+    // Deny anything not explicitly allowed above.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

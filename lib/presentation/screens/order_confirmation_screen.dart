@@ -136,15 +136,15 @@ class OrderConfirmationScreen extends ConsumerWidget {
                     const SizedBox(height: 14),
                     const Divider(),
                     const SizedBox(height: 10),
-                    _PaymentDetailRow(
+                    const _PaymentDetailRow(
                         label: 'Bank',
                         value: PaymentConstants.bankName),
                     const SizedBox(height: 8),
-                    _PaymentDetailRow(
+                    const _PaymentDetailRow(
                         label: 'Account Name',
                         value: PaymentConstants.accountName),
                     const SizedBox(height: 8),
-                    _PaymentDetailRow(
+                    const _PaymentDetailRow(
                       label: 'Account Number',
                       value: PaymentConstants.accountNumber,
                       copyable: true,

@@ -2,9 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
+import '../../core/error/error_mapper.dart';
+import '../../core/error/failures.dart';
+import '../../core/logging/app_logger.dart';
+import '../../core/providers/repository_providers.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/validation/validators.dart';
 import '../../domain/entities/ticket.dart';
-import '../../services/firestore_service.dart';
 import '../../services/notification_service.dart';
 
 class SupportTicketScreen extends ConsumerStatefulWidget {
@@ -42,13 +46,19 @@ class _SupportTicketScreenState extends ConsumerState<SupportTicketScreen> {
       final ticket = SupportTicket(
         id: const Uuid().v4(),
         customerName: _nameController.text.trim(),
-        customerPhone: _phoneController.text.trim(),
+        customerPhone: Validators.normalisePhone(_phoneController.text),
         subject: _subjectController.text.trim(),
         message: _messageController.text.trim(),
         createdAt: DateTime.now(),
       );
 
-      await FirestoreService.instance.submitTicket(ticket);
+      final result =
+          await ref.read(orderRepositoryProvider).submitTicket(ticket);
+      result.fold(
+        onSuccess: (_) {},
+        onError: (failure) => throw Exception(failure.message),
+      );
+      AppLogger.info('Support ticket submitted', tag: 'support');
 
       // Play a confirmation sound for the customer
       await NotificationService.instance.showNotification(
@@ -58,11 +68,13 @@ class _SupportTicketScreenState extends ConsumerState<SupportTicketScreen> {
       );
 
       if (mounted) setState(() => _submitted = true);
-    } catch (e) {
+    } catch (e, st) {
+      AppLogger.error('Support ticket submission failed',
+          tag: 'support', error: e, stackTrace: st);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to submit. Please try again. ($e)'),
+            content: Text(ErrorMapper.map(e, st).message),
             backgroundColor: Colors.red,
           ),
         );
@@ -193,8 +205,7 @@ class _SupportTicketScreenState extends ConsumerState<SupportTicketScreen> {
                 prefixIcon: Icon(Icons.person_outlined),
               ),
               textCapitalization: TextCapitalization.words,
-              validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? 'Enter your name' : null,
+              validator: (v) => Validators.name(v, field: 'Your name'),
             ),
             const SizedBox(height: 16),
 
@@ -207,11 +218,7 @@ class _SupportTicketScreenState extends ConsumerState<SupportTicketScreen> {
                 hintText: '08012345678',
               ),
               keyboardType: TextInputType.phone,
-              validator: (v) {
-                if (v == null || v.trim().isEmpty) return 'Enter your phone';
-                if (v.trim().length < 10) return 'Enter a valid phone number';
-                return null;
-              },
+              validator: Validators.phone,
             ),
             const SizedBox(height: 16),
 
@@ -223,8 +230,7 @@ class _SupportTicketScreenState extends ConsumerState<SupportTicketScreen> {
                 prefixIcon: Icon(Icons.subject_outlined),
                 hintText: 'e.g. Order issue, Product enquiry...',
               ),
-              validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? 'Enter a subject' : null,
+              validator: (v) => Validators.required(v, field: 'Subject'),
             ),
             const SizedBox(height: 16),
 
@@ -237,13 +243,7 @@ class _SupportTicketScreenState extends ConsumerState<SupportTicketScreen> {
                 alignLabelWithHint: true,
               ),
               maxLines: 5,
-              validator: (v) {
-                if (v == null || v.trim().isEmpty) return 'Enter your message';
-                if (v.trim().length < 10) {
-                  return 'Please provide more detail (at least 10 characters)';
-                }
-                return null;
-              },
+              validator: Validators.message,
             ),
             const SizedBox(height: 32),
 

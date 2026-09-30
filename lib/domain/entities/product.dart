@@ -14,6 +14,10 @@ class Product {
   final List<String> colors;
   final List<String> availableUnits;
 
+  /// Remaining units in stock, when tracked. Null means "not tracked" — the
+  /// store only knows whether the item is available at all.
+  final int? stockCount;
+
   const Product({
     required this.id,
     required this.name,
@@ -27,6 +31,7 @@ class Product {
     required this.inStock,
     required this.colors,
     required this.availableUnits,
+    this.stockCount,
   });
 
   double getPrice(String unit) {
@@ -57,6 +62,7 @@ class Product {
       'inStock': inStock,
       'colors': colors,
       'availableUnits': availableUnits,
+      if (stockCount != null) 'stockCount': stockCount,
       'createdAt': FieldValue.serverTimestamp(),
     };
   }
@@ -76,6 +82,7 @@ class Product {
       colors: List<String>.from(map['colors'] as List? ?? []),
       availableUnits: List<String>.from(
           map['availableUnits'] as List? ?? ['Yard', 'Meter', 'Piece']),
+      stockCount: (map['stockCount'] as num?)?.toInt(),
     );
   }
 
@@ -114,6 +121,7 @@ class Product {
     bool? inStock,
     List<String>? colors,
     List<String>? availableUnits,
+    int? stockCount,
   }) {
     return Product(
       id: id,
@@ -128,6 +136,7 @@ class Product {
       inStock: inStock ?? this.inStock,
       colors: colors ?? this.colors,
       availableUnits: availableUnits ?? this.availableUnits,
+      stockCount: stockCount ?? this.stockCount,
     );
   }
 }

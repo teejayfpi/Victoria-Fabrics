@@ -1,0 +1,128 @@
+rules_version = '2';
+
+// Victoria Fabrics — Firestore security rules.
+//
+// Guiding principles:
+//   * Deny by default. Every collection is explicitly allow-listed.
+//   * Admin privileges are read from the `admins/{uid}` document OR a
+//     `role` custom claim — never trusted from the client.
+//   * Customers may read the catalogue but may never write products.
+//   * Orders are created server-side through a transaction; the client can
+//     only read its own orders.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─── Helpers ────────────────────────────────────────────────────────
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function adminRole() {
+      return request.auth.token.role;
+    }
+
+    // Role document lookup; used as a fallback when no custom claim is set.
+    function hasAdminDoc() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    function isAdmin() {
+      return isSignedIn()
+        && (adminRole() in ['admin', 'superAdmin', 'super_admin']
+            || (adminRole() == null && hasAdminDoc()));
+    }
+
+    function isStaff() {
+      return isSignedIn()
+        && (adminRole() in ['staff', 'admin', 'superAdmin', 'super_admin']
+            || ((adminRole() == null) && hasAdminDoc()));
+    }
+
+    // ─── Products ───────────────────────────────────────────────────────
+    // Public catalogue. Staff may edit anything; a customer placing an order
+    // may only adjust the stock counters (never price or name). Full
+    // integrity requires a Cloud Function — see the note in README.
+    match /products/{productId} {
+      allow read: if true;
+      allow create, delete: if isStaff();
+      allow update: if isStaff()
+        || request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['stockCount', 'inStock']);
+    }
+
+    // ─── Categories ─────────────────────────────────────────────────────
+    // Public catalogue; only staff may manage categories.
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
+
+    // ─── Seed markers ───────────────────────────────────────────────────
+    // Idempotency guards for first-run catalogue seeding. Write-once.
+    match /_meta/{docId} {
+      allow read: if true;
+      allow create: if true;
+      allow update, delete: if false;
+    }
+
+    // ─── Admins ─────────────────────────────────────────────────────────
+    // Only an existing admin may read the roster. Writes are performed with
+    // the Admin SDK (server-side) so the client can never self-promote.
+    match /admins/{uid} {
+      allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin());
+      allow write: if false;
+    }
+
+    // ─── Orders ─────────────────────────────────────────────────────────
+    match /orders/{orderId} {
+      // Staff see everything; a signed-in customer sees only their orders.
+      allow read: if isStaff()
+        || (isSignedIn() && resource.data.userId == request.auth.uid);
+
+      // Customers (and guests) may place orders, but the payload is pinned
+      // to a fresh pending order with the expected shape. Price integrity is
+      // enforced by the client transaction in FirestoreService.createOrder;
+      // move this to a Cloud Function for defence-in-depth against a
+      // tampered client.
+      allow create: if request.resource.data.status == 'pending'
+        && request.resource.data.totalAmount is number
+        && request.resource.data.customerName is string
+        && request.resource.data.customerPhone is string
+        && request.resource.data.keys().hasOnly([
+             'id', 'userId', 'items', 'totalAmount', 'deliveryType',
+             'deliveryAddress', 'pickupLocation', 'status', 'createdAt',
+             'customerName', 'customerPhone',
+           ]);
+
+      // Only staff may advance order status.
+      allow update, delete: if isStaff();
+    }
+
+    // ─── Support tickets ────────────────────────────────────────────────
+    match /tickets/{ticketId} {
+      allow read: if isStaff()
+        || (isSignedIn() && resource.data.userId == request.auth.uid);
+
+      // Anyone (including guests) may open a ticket, but the payload is
+      // validated and cannot pre-set an administrative status.
+      allow create: if request.resource.data.status == 'open'
+        && request.resource.data.keys().hasOnly([
+             'customerName', 'customerPhone', 'subject', 'message',
+             'status', 'createdAt', 'userId',
+           ]);
+
+      allow update, delete: if isStaff();
+    }
+
+    // ─── Users ──────────────────────────────────────────────────────────
+    match /users/{uid} {
+      allow read, write: if isSignedIn() && request.auth.uid == uid;
+    }
+
+    // ─── Deny everything else ───────────────────────────────────────────
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

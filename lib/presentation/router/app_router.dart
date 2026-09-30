@@ -37,7 +37,7 @@ final appRouter = GoRouter(
     if (loc == splashRoute) return null;
 
     // Redirect to sign-in if trying to access a protected route
-    if (!isSignedIn && _protectedRoutes.any((r) => loc.startsWith(r))) {
+    if (!isSignedIn && _protectedRoutes.any(loc.startsWith)) {
       return '/signin?from=${Uri.encodeComponent(loc)}';
     }
     // Already signed in and going to sign-in → send home

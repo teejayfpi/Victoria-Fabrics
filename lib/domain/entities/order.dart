@@ -69,6 +69,10 @@ class Order {
     required this.customerPhone,
   });
 
+  /// Human-readable order reference shown to customers and staff, e.g.
+  /// `VF-7F3A2B`.
+  String get reference => 'VF-${id.toUpperCase()}';
+
   String get statusDisplayName => status.displayName;
 
   String get deliveryTypeDisplayName {
@@ -134,6 +138,7 @@ class Order {
                 ),
                 quantity: (i['quantity'] as num).toInt(),
                 selectedUnit: i['selectedUnit'] as String? ?? 'Yard',
+                unitPriceOverride: (i['unitPrice'] as num?)?.toDouble(),
               ))
           .toList(),
       totalAmount: (data['totalAmount'] as num).toDouble(),
