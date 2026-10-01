@@ -44,6 +44,10 @@ for the Firebase project `victoria-fabrics`. Treat this file as environment
 configuration: in a multi-environment setup, inject it at build time rather
 than committing per-project copies.
 
+Google sign-in also requires provider and SHA-1 configuration in the Firebase
+console. See [`docs/google-sign-in-setup.md`](docs/google-sign-in-setup.md) for
+the two failure messages it can produce and how to resolve them.
+
 ### Security rules
 
 `firestore.rules` and `storage.rules` are deny-by-default and enforce

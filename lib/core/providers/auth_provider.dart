@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../error/exceptions.dart';
+import '../logging/app_logger.dart';
 
 const _googleWebClientId =
     '1010144166475-6ke40f39m9f4tim92q46gu8p75igqeci.apps.googleusercontent.com';
@@ -132,6 +133,10 @@ String authErrorMessage(Object error) {
   if (error is AuthException) return error.message;
 
   if (error is FirebaseAuthException) {
+    // Log the raw provider code so an unsupported one can be diagnosed from
+    // the device log instead of only the generic message shown to the user.
+    AppLogger.warning('Google sign-in Firebase error',
+        tag: 'auth', context: {'code': error.code});
     switch (error.code) {
       case 'operation-not-allowed':
         return 'Google sign-in is disabled in Firebase. Please contact support.';
@@ -161,6 +166,11 @@ String authErrorMessage(Object error) {
   }
 
   if (error is PlatformException) {
+    // sign_in_failed / code 10 is DEVELOPER_ERROR: the Android OAuth client
+    // (package + SHA-1) does not match this build's signing key.
+    AppLogger.warning('Google sign-in platform error',
+        tag: 'auth',
+        context: {'code': error.code, 'message': error.message ?? ''});
     switch (error.code) {
       case 'sign_in_failed':
       case '10':
