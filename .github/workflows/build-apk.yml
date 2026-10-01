@@ -63,6 +63,26 @@ jobs:
             echo "ANDROID_KEYSTORE_BASE64 not set; release APK will be debug-signed."
           fi
 
+      - name: Show signing certificate for Firebase
+        # Google sign-in only works when the SHA-1 of the key that signed the
+        # installed APK is registered in Firebase. This prints the exact value
+        # for whichever key this run used, so it can be copied into the console
+        # (Project settings -> Your apps -> Add fingerprint).
+        run: |
+          if [ -f android/key.properties ]; then
+            ALIAS=$(sed -n 's/^keyAlias=//p' android/key.properties)
+            STORE=$(sed -n 's/^storePassword=//p' android/key.properties)
+            echo "Signing key: release keystore (alias $ALIAS)"
+            keytool -list -v -keystore android/app/upload-keystore.jks \
+              -alias "$ALIAS" -storepass "$STORE" \
+              | grep -E "SHA1:|SHA256:"
+          else
+            echo "Signing key: CI debug keystore"
+            keytool -list -v -keystore ~/.android/debug.keystore \
+              -alias androiddebugkey -storepass android -keypass android \
+              | grep -E "SHA1:|SHA256:"
+          fi
+
       - name: Build debug APK
         run: flutter build apk --debug --flavor ${{ matrix.app }} --target ${{ matrix.target }}
 

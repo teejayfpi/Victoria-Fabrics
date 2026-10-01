@@ -58,6 +58,28 @@ If the app is distributed through Google Play, Play re-signs it. Register the
 **App signing key certificate** SHA-1 (Play Console → Release → Setup → App
 signing) as well, otherwise sign-in fails only for Play-installed builds.
 
+### APKs downloaded from GitHub Actions
+
+A build produced by CI is **not** signed with your local debug key, so an APK
+from the Actions tab will fail Google sign-in until its own key is registered.
+
+Which key that is depends on the `ANDROID_KEYSTORE_BASE64` secret:
+
+- **Secret set** — CI signs with your release keystore. Its SHA-1 is stable;
+  register it once (the workflow prints it, see below) and CI release APKs
+  work from then on.
+- **Secret not set** — CI signs with the *runner's* debug keystore, which is
+  regenerated for every run. Its SHA-1 changes each build, so registering it
+  is pointless. Configure the keystore secret (see
+  `android/key.properties.example`) and register the release SHA-1 instead.
+
+The `Build APKs` workflow prints the fingerprint it used in a
+**"Show signing certificate for Firebase"** step, along with which key was
+used. Open the run and copy the `SHA1:` value from there.
+
+In short: register a *stable* key (release keystore, or Play App Signing) and
+always install builds signed with that key.
+
 ## 3. Refresh the config
 
 After adding fingerprints, download the updated `google-services.json` and
