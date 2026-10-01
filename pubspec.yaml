@@ -53,7 +53,7 @@ dependencies:
   google_sign_in: ^6.2.1
 
   # Media
-  image_picker: ^1.1.2
+  image_picker: ^1.2.3
 
   # Opens the payment WhatsApp chat / dialer from checkout
   url_launcher: ^6.3.1
