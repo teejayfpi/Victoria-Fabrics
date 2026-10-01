@@ -260,7 +260,7 @@ class AuthHeader extends StatelessWidget {
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.18),
+                  color: Colors.black.withValues(alpha: 0.18),
                   blurRadius: 24,
                   offset: const Offset(0, 10),
                 ),
@@ -297,7 +297,7 @@ class AuthHeader extends StatelessWidget {
             subtitle,
             style: TextStyle(
               fontSize: 15,
-              color: Colors.white.withOpacity(0.9),
+              color: Colors.white.withValues(alpha: 0.9),
             ),
           ),
         ],

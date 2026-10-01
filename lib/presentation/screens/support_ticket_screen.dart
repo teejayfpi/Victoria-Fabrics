@@ -102,7 +102,7 @@ class _SupportTicketScreenState extends ConsumerState<SupportTicketScreen> {
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.1),
+                color: Colors.green.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.check_circle,
@@ -168,7 +168,7 @@ class _SupportTicketScreenState extends ConsumerState<SupportTicketScreen> {
                 gradient: LinearGradient(
                   colors: [
                     AppTheme.primaryColor,
-                    AppTheme.primaryColor.withOpacity(0.75)
+                    AppTheme.primaryColor.withValues(alpha: 0.75)
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,

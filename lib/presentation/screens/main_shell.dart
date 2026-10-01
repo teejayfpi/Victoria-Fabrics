@@ -44,7 +44,7 @@ class MainShell extends ConsumerWidget {
         selectedIndex: idx,
         onDestinationSelected: (i) => _onTap(context, i),
         backgroundColor: Colors.white,
-        indicatorColor: AppTheme.primaryColor.withOpacity(0.12),
+        indicatorColor: AppTheme.primaryColor.withValues(alpha: 0.12),
         destinations: [
           const NavigationDestination(
             icon: Icon(Icons.home_outlined),

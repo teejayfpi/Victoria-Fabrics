@@ -21,6 +21,33 @@ CI (`.github/workflows/ci.yml`) runs lint, tests, a Cloud Functions
 type-check, and a debug/release build of *both* flavors. A flavorless
 `flutter build apk` fails once flavors exist — always pass `--flavor`.
 
+## Toolchain
+
+Flutter **3.47.5** (Dart 3.13), pinned in both workflows. The Firebase 4.x /
+`image_picker` 1.2.x / `flutter_native_splash` 2.4.8 bumps all need Dart
+≥ 3.10, so the older 3.24 pin cannot resolve them — do not downgrade it back.
+
+Android side (all required by Flutter 3.47):
+
+| Piece | Version | Why |
+| --- | --- | --- |
+| Gradle | 9.3.1 | Flutter 3.47 refuses anything below 8.14 |
+| AGP | 9.1.0 | Matches Flutter 3.47's template; older AGP fails the DSL check |
+| Kotlin | 2.4.0 | Matches the template |
+| compileSdk | 36 | `image_picker_android` / `androidx.activity` 1.13 need API 36 |
+| NDK | 28.2.13676358 | Flutter 3.47 default (`flutter.ndkVersion`) |
+
+`android/gradle.properties` sets `android.newDsl=false` and
+`android.builtInKotlin=false` so AGP 9 keeps using the legacy DSL that
+`android/app/build.gradle` is written in; flavor `resValue` also needs
+`buildFeatures { resValues = true }`. `coreLibraryDesugaring` is on for
+`flutter_local_notifications`.
+
+Theme/API notes for this SDK: use `Color.withValues(alpha:)` (not
+`withOpacity`), `CardThemeData` (not `CardTheme`), and
+`DropdownButtonFormField(initialValue:)` (not `value:`). CI runs
+`flutter analyze --fatal-infos`, so any new deprecation fails the build.
+
 ## Architecture
 
 Layered: `domain/` (entities, pure) → `data/` (repositories, mappers,

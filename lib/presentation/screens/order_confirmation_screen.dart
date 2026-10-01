@@ -111,7 +111,7 @@ class OrderConfirmationScreen extends ConsumerWidget {
                         Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF1565C0).withOpacity(0.1),
+                            color: const Color(0xFF1565C0).withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: const Icon(Icons.account_balance,

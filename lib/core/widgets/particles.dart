@@ -32,7 +32,7 @@ class ParticlesPainter extends CustomPainter {
             math.cos(angle + progress * 2) * 15 * speed,
       );
 
-      paint.color = color.withOpacity(0.3 + random.nextDouble() * 0.4);
+      paint.color = color.withValues(alpha: 0.3 + random.nextDouble() * 0.4);
       canvas.drawCircle(offset, radius, paint);
     }
   }

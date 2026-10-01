@@ -301,7 +301,7 @@ class _ProductCard extends StatelessWidget {
                       color: (product.inStock
                               ? Colors.green
                               : Colors.red)
-                          .withOpacity(0.1),
+                          .withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(

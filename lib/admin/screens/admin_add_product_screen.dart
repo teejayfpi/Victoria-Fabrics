@@ -311,7 +311,7 @@ class _AdminAddProductScreenState extends ConsumerState<AdminAddProductScreen> {
 
               // ── Category ──
               DropdownButtonFormField<String>(
-                value: _selectedCategory,
+                initialValue: _selectedCategory,
                 decoration: const InputDecoration(labelText: 'Category *'),
                 items: categories
                     .map((cat) => DropdownMenuItem(
@@ -417,7 +417,7 @@ class _AdminAddProductScreenState extends ConsumerState<AdminAddProductScreen> {
                 value: _inStock,
                 onChanged: (v) => setState(() => _inStock = v),
                 contentPadding: EdgeInsets.zero,
-                activeColor: AppTheme.primaryColor,
+                activeThumbColor: AppTheme.primaryColor,
               ),
               const SizedBox(height: 32),
 

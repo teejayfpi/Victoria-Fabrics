@@ -122,7 +122,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                     decoration: BoxDecoration(
-                      color: AppTheme.primaryColor.withOpacity(0.1),
+                      color: AppTheme.primaryColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
@@ -239,7 +239,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                             setState(() => _selectedUnit = unit);
                           }
                         },
-                        selectedColor: AppTheme.primaryColor.withOpacity(0.2),
+                        selectedColor: AppTheme.primaryColor.withValues(alpha: 0.2),
                         labelStyle: TextStyle(
                           color: isSelected ? AppTheme.primaryColor : Colors.black,
                           fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
@@ -315,7 +315,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
           color: Colors.white,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withValues(alpha: 0.1),
               blurRadius: 10,
               offset: const Offset(0, -2),
             ),

@@ -28,7 +28,7 @@ class ProductImage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final error = Container(
-      color: AppColors.divider.withOpacity(0.3),
+      color: AppColors.divider.withValues(alpha: 0.3),
       child: const Center(
         child: Icon(
           Icons.checkroom_rounded,
@@ -53,7 +53,7 @@ class ProductImage extends StatelessWidget {
       imageUrl: imageUrl,
       fit: fit,
       placeholder: (_, __) =>
-          Container(color: AppColors.divider.withOpacity(0.3)),
+          Container(color: AppColors.divider.withValues(alpha: 0.3)),
       errorWidget: (_, __, ___) => error,
     );
   }

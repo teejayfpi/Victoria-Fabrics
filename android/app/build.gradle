@@ -22,12 +22,14 @@ android {
     namespace = "com.fabrichaven.fabric_haven"
     // 35 is the minimum required by flutter_plugin_android_lifecycle. The
     // platform is backward compatible, so compiling higher is safe.
-    compileSdk = 35
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
+        // Required by flutter_local_notifications (java.time backport).
+        coreLibraryDesugaringEnabled = true
     }
 
     kotlinOptions {
@@ -38,10 +40,15 @@ android {
         // Base id; the product flavors below override it so the customer and
         // admin builds install side by side on the same device.
         applicationId = "com.fabrichaven.fabric_haven"
-        minSdk = 23  // Required for Firebase
+        minSdkVersion = flutter.minSdkVersion  // Required for Firebase
         targetSdk = 34
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+    }
+
+    // AGP 9 gates flavor-level resValue behind this feature flag.
+    buildFeatures {
+        resValues = true
     }
 
     // Two apps from one codebase. Without distinct applicationIds Android
@@ -82,6 +89,10 @@ android {
             proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
         }
     }
+}
+
+dependencies {
+    coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:2.1.5"
 }
 
 flutter {

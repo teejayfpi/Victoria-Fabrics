@@ -134,7 +134,7 @@ class _AdminSplashScreenState extends ConsumerState<AdminSplashScreen>
             builder: (context, child) => CustomPaint(
               painter: ParticlesPainter(
                 progress: _particlesController.value,
-                color: Colors.white.withOpacity(0.1),
+                color: Colors.white.withValues(alpha: 0.1),
               ),
               size: Size.infinite,
             ),
@@ -149,7 +149,7 @@ class _AdminSplashScreenState extends ConsumerState<AdminSplashScreen>
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
                   colors: [
-                    AppColors.accent.withOpacity(0.3),
+                    AppColors.accent.withValues(alpha: 0.3),
                     Colors.transparent,
                   ],
                 ),
@@ -166,7 +166,7 @@ class _AdminSplashScreenState extends ConsumerState<AdminSplashScreen>
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
                   colors: [
-                    AppColors.primaryLight.withOpacity(0.2),
+                    AppColors.primaryLight.withValues(alpha: 0.2),
                     Colors.transparent,
                   ],
                 ),
@@ -199,12 +199,12 @@ class _AdminSplashScreenState extends ConsumerState<AdminSplashScreen>
                               borderRadius: BorderRadius.circular(32),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.2),
+                                  color: Colors.black.withValues(alpha: 0.2),
                                   blurRadius: 30,
                                   offset: const Offset(0, 15),
                                 ),
                                 BoxShadow(
-                                  color: AppColors.accent.withOpacity(0.3),
+                                  color: AppColors.accent.withValues(alpha: 0.3),
                                   blurRadius: 60,
                                   offset: const Offset(0, 30),
                                 ),
@@ -263,7 +263,7 @@ class _AdminSplashScreenState extends ConsumerState<AdminSplashScreen>
                             'Admin Console',
                             style: TextStyle(
                               fontSize: 16,
-                              color: Colors.white.withOpacity(0.9),
+                              color: Colors.white.withValues(alpha: 0.9),
                               fontWeight: FontWeight.w400,
                               height: 1.4,
                             ),
@@ -342,9 +342,9 @@ class _FeaturePill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.15),
+        color: Colors.white.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.2)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

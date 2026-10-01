@@ -210,12 +210,12 @@ class AppColors {
   static List<BoxShadow> primaryShadow([double opacity = 0.15]) {
     return [
       BoxShadow(
-        color: primary.withOpacity(opacity),
+        color: primary.withValues(alpha: opacity),
         blurRadius: 20,
         offset: const Offset(0, 8),
       ),
       BoxShadow(
-        color: primary.withOpacity(opacity * 0.5),
+        color: primary.withValues(alpha: opacity * 0.5),
         blurRadius: 10,
         offset: const Offset(0, 4),
       ),
@@ -225,12 +225,12 @@ class AppColors {
   static List<BoxShadow> accentShadow([double opacity = 0.2]) {
     return [
       BoxShadow(
-        color: accent.withOpacity(opacity),
+        color: accent.withValues(alpha: opacity),
         blurRadius: 20,
         offset: const Offset(0, 8),
       ),
       BoxShadow(
-        color: accent.withOpacity(opacity * 0.5),
+        color: accent.withValues(alpha: opacity * 0.5),
         blurRadius: 10,
         offset: const Offset(0, 4),
       ),
@@ -242,7 +242,7 @@ class AppColors {
     double opacity = 0.8,
   }) {
     return BoxDecoration(
-      color: Colors.white.withOpacity(opacity),
+      color: Colors.white.withValues(alpha: opacity),
       borderRadius: BorderRadius.circular(borderRadius),
       border: Border.all(color: glassBorder, width: 1.5),
       boxShadow: const [
