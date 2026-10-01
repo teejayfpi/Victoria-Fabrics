@@ -15,11 +15,11 @@
       },
       "oauth_client": [
         {
-          "client_id": "1010144166475-2e1ketnivtoe9223amceoah4pvgae60i.apps.googleusercontent.com",
+          "client_id": "1010144166475-j6hfqlo591a7ki0t0cunei1ds32fvb2a.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.fabrichaven.fabric_haven_admin",
-            "certificate_hash": "a029a10f230a5c9a68d3f616feae38f6d7148a26"
+            "certificate_hash": "a425e9f8516e658335f3d0aa2e56de1840cb1063"
           }
         },
         {
