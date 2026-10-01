@@ -12,16 +12,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.24.0'
           channel: 'stable'
-          
+
       - name: Install dependencies
         run: flutter pub get
-        
+
       - name: Analyze code
         run: flutter analyze --fatal-infos
 
@@ -30,16 +30,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.24.0'
           channel: 'stable'
-          
+
       - name: Install dependencies
         run: flutter pub get
-        
+
       - name: Run tests
         run: flutter test --coverage
 
@@ -71,68 +71,85 @@ jobs:
         run: npm run lint
 
   build-android:
-    name: Build Android APK
+    name: Build ${{ matrix.app }} APK
     runs-on: ubuntu-latest
     needs: [lint, test]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - app: customer
+            target: lib/main.dart
+          - app: admin
+            target: lib/main_admin.dart
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.24.0'
           channel: 'stable'
-          
+
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
-          
+
       - name: Install dependencies
         run: flutter pub get
-        
+
+      - name: Generate splash screen
+        run: dart run flutter_native_splash:create
+
       - name: Build debug APK
-        run: flutter build apk --debug
-      
+        run: flutter build apk --debug --flavor ${{ matrix.app }} --target ${{ matrix.target }}
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: debug-apk
-          path: build/app/outputs/flutter-apk/app-debug.apk
+          name: ${{ matrix.app }}-debug-apk
+          path: build/app/outputs/flutter-apk/app-${{ matrix.app }}-debug.apk
 
   build-android-release:
-    name: Build Android Release
+    name: Build ${{ matrix.app }} Release APK
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - app: customer
+            target: lib/main.dart
+          - app: admin
+            target: lib/main_admin.dart
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.24.0'
           channel: 'stable'
-          
+
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
-          
+
       - name: Install dependencies
         run: flutter pub get
-        
+
+      - name: Generate splash screen
+        run: dart run flutter_native_splash:create
+
       - name: Build release APK
-        run: flutter build apk --release
-        env:
-          KEYSTORE_FILE: ${{ secrets.KEYSTORE_FILE }}
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-      
+        run: flutter build apk --release --flavor ${{ matrix.app }} --target ${{ matrix.target }}
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: release-apk
-          path: build/app/outputs/flutter-apk/app-release.apk
+          name: ${{ matrix.app }}-release-apk
+          path: build/app/outputs/flutter-apk/app-${{ matrix.app }}-release.apk

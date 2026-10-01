@@ -1,10 +1,15 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
 
-/// Displays a product image from either a bundled asset path (prefix
-/// `assets/`) or a remote URL, with a consistent placeholder and error state.
+/// Displays a product image from a bundled asset path (prefix `assets/`), an
+/// inline `data:` URI (free-tier fallback when Firebase Storage is
+/// unavailable), or a remote URL, with a consistent placeholder and error
+/// state.
 class ProductImage extends StatelessWidget {
   const ProductImage({
     super.key,
@@ -17,6 +22,8 @@ class ProductImage extends StatelessWidget {
 
   bool get _isAsset =>
       imageUrl.startsWith('assets/') || imageUrl.startsWith('asset://');
+
+  bool get _isInlineData => imageUrl.startsWith('data:image/');
 
   @override
   Widget build(BuildContext context) {
@@ -36,6 +43,12 @@ class ProductImage extends StatelessWidget {
       return Image.asset(path, fit: fit, errorBuilder: (_, __, ___) => error);
     }
 
+    if (_isInlineData) {
+      final bytes = _decodeInline();
+      if (bytes == null) return error;
+      return Image.memory(bytes, fit: fit, errorBuilder: (_, __, ___) => error);
+    }
+
     return CachedNetworkImage(
       imageUrl: imageUrl,
       fit: fit,
@@ -43,5 +56,13 @@ class ProductImage extends StatelessWidget {
           Container(color: AppColors.divider.withOpacity(0.3)),
       errorWidget: (_, __, ___) => error,
     );
+  }
+
+  Uint8List? _decodeInline() {
+    try {
+      return base64Decode(imageUrl.substring(imageUrl.indexOf(',') + 1));
+    } catch (_) {
+      return null;
+    }
   }
 }
