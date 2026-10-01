@@ -34,6 +34,11 @@ double orderTotal(List<Map<String, dynamic>> lineItems) {
   return double.parse(total.toStringAsFixed(2));
 }
 
+/// Maximum number of distinct lines in one order. Mirrors the ceiling in
+/// `firestore.rules`, which cannot loop over items and therefore unrolls the
+/// per-line validation.
+const int kMaxOrderLines = 10;
+
 /// Builds the Firestore document for a new order.
 ///
 /// [userId] must be the signed-in uid, or null for a guest order — the security
@@ -50,6 +55,14 @@ Map<String, dynamic> buildOrderDocument({
   required String customerName,
   required String customerPhone,
 }) {
+  if (lineItems.isEmpty) {
+    throw ArgumentError('An order must contain at least one item');
+  }
+  if (lineItems.length > kMaxOrderLines) {
+    throw ArgumentError(
+      'An order may contain at most $kMaxOrderLines different items',
+    );
+  }
   return {
     'id': shortId,
     if (userId != null) 'userId': userId,

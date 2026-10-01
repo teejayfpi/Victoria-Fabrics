@@ -86,14 +86,30 @@ service cloud.firestore {
     // The client may not choose its own status, backdate the order, or place it
     // on behalf of another account.
     function orderShapeValid() {
-      return request.resource.data.status == 'pending'
+      // Field allow-list, size caps and a total ceiling keep a client on the
+      // transaction fallback from padding an order document with junk fields
+      // or absurd values. Prices themselves are still derived by the rules.
+      return request.resource.data.keys().hasOnly([
+               'id', 'userId', 'items', 'totalAmount', 'deliveryType',
+               'deliveryAddress', 'pickupLocation', 'status', 'createdAt',
+               'customerName', 'customerPhone',
+             ])
+        && request.resource.data.status == 'pending'
         && request.resource.data.createdAt == request.time
         && request.resource.data.userId == request.auth.uid
         && request.resource.data.deliveryType in ['delivery', 'pickup']
+        && request.resource.data.id is string
+        && request.resource.data.id.size() == 8
+        && request.resource.data.items is list
+        && request.resource.data.items.size() > 0
+        && request.resource.data.items.size() <= 10
         && request.resource.data.totalAmount is number
         && request.resource.data.totalAmount > 0
+        && request.resource.data.totalAmount < 100000000
         && request.resource.data.customerName is string
-        && request.resource.data.customerPhone is string;
+        && request.resource.data.customerName.size() <= 200
+        && request.resource.data.customerPhone is string
+        && request.resource.data.customerPhone.size() <= 30;
     }
 
     // ─── Products ───────────────────────────────────────────────────────

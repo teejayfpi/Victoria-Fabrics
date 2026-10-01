@@ -139,5 +139,40 @@ void main() {
       expect(doc['deliveryAddress'], isNull);
       expect(doc['pickupLocation'], 'Victoria Fabrics Store, Lagos');
     });
+
+    test('rejects an order with no items', () {
+      expect(
+        () => buildOrderDocument(
+          shortId: 'ABC12345',
+          userId: 'uid-1',
+          lineItems: const [],
+          totalAmount: 0,
+          deliveryType: DeliveryType.pickup,
+          customerName: 'Ada',
+          customerPhone: '+2348000000000',
+        ),
+        throwsA(isA<ArgumentError>()),
+      );
+    });
+
+    test('rejects more lines than the rules accept', () {
+      final tooMany = List.generate(
+        kMaxOrderLines + 1,
+        (i) => {'productId': 'p$i', 'quantity': 1, 'totalPrice': 1.0},
+      );
+
+      expect(
+        () => buildOrderDocument(
+          shortId: 'ABC12345',
+          userId: 'uid-1',
+          lineItems: tooMany,
+          totalAmount: 1,
+          deliveryType: DeliveryType.pickup,
+          customerName: 'Ada',
+          customerPhone: '+2348000000000',
+        ),
+        throwsA(isA<ArgumentError>()),
+      );
+    });
   });
 }
