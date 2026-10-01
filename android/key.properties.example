@@ -1,0 +1,17 @@
+# Copy to android/key.properties and fill in with your upload key details.
+#
+# Generate the keystore once and keep it somewhere you will not lose it — this
+# file cannot be regenerated, and Play will reject future updates signed with a
+# different key:
+#
+#   keytool -genkeypair -v -keystore upload-keystore.jks \
+#     -storetype JKS -keyalg RSA -keysize 2048 -validity 10000 \
+#     -alias upload
+#
+# key.properties is gitignored. Commit this example file, never the real one.
+
+storePassword=YOUR_STORE_PASSWORD
+keyPassword=YOUR_KEY_PASSWORD
+keyAlias=upload
+# Absolute, or relative to the android/app directory.
+storeFile=../upload-keystore.jks
