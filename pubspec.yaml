@@ -8,14 +8,28 @@ environment:
   sdk: ^3.5.0
 
 flutter_native_splash:
-  color: "#1B1714"
-  image: assets/images/splash.jpg
+  # Matches AppColors.heroGradient's mid emerald so the native splash hands off
+  # to the animated in-app splash without a visible colour jump.
+  color: "#0A6847"
+  image: assets/images/splash_logo.png
   android: true
   ios: true
   android_12:
-    color: "#1B1714"
-    image: assets/images/splash.jpg
+    color: "#0A6847"
+    image: assets/images/splash_logo.png
   web: false
+
+# Regenerate with: dart run flutter_launcher_icons
+# One brand, two installs: the admin build swaps the accent to terracotta so
+# staff can tell the apps apart on the home screen.
+flutter_launcher_icons:
+  image_path: assets/icon/icon_customer.png
+  android: true
+  ios: false
+  adaptive_icon_background: "#0A6847"
+  adaptive_icon_foreground: assets/icon/icon_customer_foreground.png
+  adaptive_icon_foreground_inset: 18
+  remove_alpha_ios: true
 
 dependencies:
   flutter:
@@ -39,6 +53,9 @@ dependencies:
   # Media
   image_picker: ^1.1.2
 
+  # Opens the payment WhatsApp chat / dialer from checkout
+  url_launcher: ^6.3.1
+
   # Notifications
   flutter_local_notifications: ^18.0.1
   flutter_native_splash: ^2.4.1
@@ -47,6 +64,7 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^4.0.0
+  flutter_launcher_icons: ^0.14.1
 
 flutter:
   uses-material-design: true

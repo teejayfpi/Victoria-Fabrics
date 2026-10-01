@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../providers/order_provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/constants/payment_constants.dart';
+import '../widgets/payment_actions.dart';
 
 class OrderConfirmationScreen extends ConsumerWidget {
   const OrderConfirmationScreen({super.key});
@@ -186,6 +187,13 @@ class OrderConfirmationScreen extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 28),
+
+              // ── Payment follow-up ──────────────────────────────────────
+              PaymentActions(
+                orderId: order?.id,
+                amount: order?.totalAmount.toStringAsFixed(0),
+              ),
+              const SizedBox(height: 20),
 
               // ── Actions ────────────────────────────────────────────────
               ElevatedButton(

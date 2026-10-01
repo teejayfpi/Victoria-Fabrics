@@ -4,11 +4,13 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  test('splash asset is bundled and loads', () async {
-    final data = await rootBundle.load('assets/images/splash.jpg');
+  test('splash logo asset is bundled and loads', () async {
+    final data = await rootBundle.load('assets/images/splash_logo.png');
     expect(data.lengthInBytes, greaterThan(1000));
-    // JPEG magic bytes
-    expect(data.getUint8(0), 0xFF);
-    expect(data.getUint8(1), 0xD8);
+    // PNG magic bytes
+    expect(data.getUint8(0), 0x89);
+    expect(data.getUint8(1), 0x50);
+    expect(data.getUint8(2), 0x4E);
+    expect(data.getUint8(3), 0x47);
   });
 }

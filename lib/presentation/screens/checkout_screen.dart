@@ -8,6 +8,7 @@ import '../../domain/entities/order.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/constants/payment_constants.dart';
+import '../widgets/payment_actions.dart';
 
 class CheckoutScreen extends ConsumerStatefulWidget {
   const CheckoutScreen({super.key});
@@ -230,6 +231,11 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               const _SectionHeader('Payment Method'),
               const SizedBox(height: 12),
               _BankTransferCard(totalAmount: grandTotal),
+              const SizedBox(height: 12),
+              PaymentActions(
+                amount: grandTotal.toStringAsFixed(0),
+                whatsappLabel: 'Send payment receipt on WhatsApp',
+              ),
               const SizedBox(height: 24),
 
               // ── Order summary ─────────────────────────────────────────

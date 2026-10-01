@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/constants/payment_constants.dart';
+import '../widgets/payment_actions.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -161,12 +164,7 @@ class ProfileScreen extends ConsumerWidget {
               icon: Icons.help,
               title: 'Help & Support',
               subtitle: 'Get help with your orders',
-              onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                      content: Text('Coming soon — help & support')),
-                );
-              },
+              onTap: () => _showPaymentSupport(context),
             ),
             _MenuItem(
               icon: Icons.info,
@@ -198,6 +196,94 @@ class ProfileScreen extends ConsumerWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  /// Payment details and support contacts, reachable without re-entering
+  /// checkout — buyers often come back here to chase an order.
+  void _showPaymentSupport(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Payment & Support',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                PaymentConstants.paymentInstructions,
+                style: TextStyle(fontSize: 13, color: Colors.grey[700]),
+              ),
+              const SizedBox(height: 16),
+              const _SupportRow('Bank', PaymentConstants.bankName),
+              const _SupportRow('Account Name', PaymentConstants.accountName),
+              const _SupportRow(
+                'Account Number',
+                PaymentConstants.accountNumber,
+                copyable: true,
+              ),
+              const SizedBox(height: 20),
+              const PaymentActions(
+                whatsappLabel: 'Message us on WhatsApp',
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SupportRow extends StatelessWidget {
+  const _SupportRow(this.label, this.value, {this.copyable = false});
+
+  final String label;
+  final String value;
+  final bool copyable;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 130,
+            child: Text(
+              label,
+              style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          if (copyable)
+            IconButton(
+              tooltip: 'Copy',
+              icon: const Icon(Icons.copy, size: 18),
+              onPressed: () {
+                Clipboard.setData(ClipboardData(text: value));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Account number copied')),
+                );
+              },
+            ),
+        ],
       ),
     );
   }
