@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../core/providers/auth_provider.dart';
-import '../../core/theme/app_theme.dart';
 
+import '../../core/providers/auth_provider.dart';
+import '../../core/theme/app_colors.dart';
+import '../widgets/google_logo.dart';
+
+/// Sign-in gate for the customer app.
+///
+/// There is deliberately no guest bypass: the catalogue and account area are
+/// only reachable by an authenticated user.
 class SignInScreen extends ConsumerStatefulWidget {
-  /// Where to go after successful sign-in (defaults to home)
+  /// Where to go after a successful sign-in (defaults to home).
   final String? redirectTo;
 
   const SignInScreen({super.key, this.redirectTo});
@@ -15,266 +21,338 @@ class SignInScreen extends ConsumerStatefulWidget {
 }
 
 class _SignInScreenState extends ConsumerState<SignInScreen> {
-  bool _loading = false;
+  final _formKey = GlobalKey<FormState>();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+
+  bool _obscurePassword = true;
+  bool _busy = false;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  void _goHome() => context.go(widget.redirectTo ?? '/');
+
+  void _showError(Object error) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(authErrorMessage(error)),
+        backgroundColor: AppColors.error,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
 
   Future<void> _signInWithGoogle() async {
-    setState(() => _loading = true);
+    setState(() => _busy = true);
+    try {
+      final signedIn =
+          await ref.read(authControllerProvider.notifier).signInWithGoogle();
+      if (signedIn) _goHome();
+    } catch (e) {
+      _showError(e);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _signInWithEmail() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => _busy = true);
     try {
       final signedIn = await ref
           .read(authControllerProvider.notifier)
-          .signInWithGoogle();
-      if (mounted && signedIn) {
-        context.go(widget.redirectTo ?? '/');
-      }
+          .signInWithEmail(
+            email: _emailController.text,
+            password: _passwordController.text,
+          );
+      if (signedIn) _goHome();
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(authErrorMessage(e)),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      _showError(e);
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted) setState(() => _busy = false);
     }
+  }
+
+  Future<void> _forgotPassword() async {
+    final email = _emailController.text.trim();
+    if (email.isEmpty) {
+      _showError('Enter your email address first, then tap “Forgot password”.');
+      return;
+    }
+    try {
+      await ref.read(authControllerProvider.notifier).sendPasswordReset(email);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Password reset link sent. Check your inbox.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (e) {
+      _showError(e);
+    }
+  }
+
+  void _goToRegister() {
+    final from = widget.redirectTo;
+    context.go(
+      from == null
+          ? '/register'
+          : '/register?from=${Uri.encodeComponent(from)}',
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 28),
-          child: Column(
-            children: [
-              const Spacer(flex: 2),
-
-              // Logo / branding
-              Container(
-                width: 100,
-                height: 100,
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryColor.withOpacity(0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.diamond_outlined,
-                  size: 52,
-                  color: AppTheme.primaryColor,
-                ),
-              ),
-              const SizedBox(height: 20),
-              const Text(
-                'Victoria Fabrics',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.textColor,
-                ),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                'Use your Google account to register or sign in.\nNo separate password is required.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Colors.grey[600],
-                  fontSize: 15,
-                  height: 1.5,
-                ),
-              ),
-
-              const Spacer(flex: 2),
-
-              // Benefits
-              const _BenefitRow(
-                icon: Icons.receipt_long,
-                text: 'Track all your orders in one place',
-              ),
-              const SizedBox(height: 14),
-              const _BenefitRow(
-                icon: Icons.shopping_cart,
-                text: 'Faster checkout — your info is saved',
-              ),
-              const SizedBox(height: 14),
-              const _BenefitRow(
-                icon: Icons.notifications_active_outlined,
-                text: 'Get updates when your order is ready',
-              ),
-
-              const Spacer(flex: 3),
-
-              // Google Sign-In button
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: ElevatedButton(
-                  onPressed: _loading ? null : _signInWithGoogle,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: Colors.black87,
-                    elevation: 1,
-                    side: BorderSide(color: Colors.grey[300]!),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+      backgroundColor: AppColors.background,
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            const AuthHeader(
+              title: 'Welcome back',
+              subtitle: 'Sign in to shop the collection',
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 28, 24, 32),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    TextFormField(
+                      controller: _emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      textInputAction: TextInputAction.next,
+                      autofillHints: const [AutofillHints.email],
+                      decoration: const InputDecoration(
+                        labelText: 'Email',
+                        hintText: 'you@example.com',
+                        prefixIcon: Icon(Icons.mail_outline_rounded),
+                      ),
+                      validator: (v) {
+                        final value = (v ?? '').trim();
+                        if (value.isEmpty) return 'Enter your email address';
+                        if (!value.contains('@') || !value.contains('.')) {
+                          return 'Enter a valid email address';
+                        }
+                        return null;
+                      },
                     ),
-                  ),
-                  child: _loading
-                      ? const SizedBox(
-                          width: 24,
-                          height: 24,
-                          child:
-                              CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            _GoogleLogo(),
-                            const SizedBox(width: 12),
-                            const Text(
-                              'Continue with Google',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _passwordController,
+                      obscureText: _obscurePassword,
+                      textInputAction: TextInputAction.done,
+                      autofillHints: const [AutofillHints.password],
+                      onFieldSubmitted: (_) {
+                        if (!_busy) _signInWithEmail();
+                      },
+                      decoration: InputDecoration(
+                        labelText: 'Password',
+                        prefixIcon: const Icon(Icons.lock_outline_rounded),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscurePassword
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined,
+                          ),
+                          onPressed: () => setState(
+                            () => _obscurePassword = !_obscurePassword,
+                          ),
                         ),
+                      ),
+                      validator: (v) =>
+                          (v == null || v.isEmpty) ? 'Enter your password' : null,
+                    ),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: _busy ? null : _forgotPassword,
+                        child: const Text('Forgot password?'),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      height: 52,
+                      child: FilledButton(
+                        onPressed: _busy ? null : _signInWithEmail,
+                        child: _busy
+                            ? const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.5,
+                                  valueColor:
+                                      AlwaysStoppedAnimation(Colors.white),
+                                ),
+                              )
+                            : const Text('Sign in'),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    const OrDivider(),
+                    const SizedBox(height: 24),
+                    _GoogleButton(
+                      enabled: !_busy,
+                      onPressed: _signInWithGoogle,
+                    ),
+                    const SizedBox(height: 28),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Text(
+                          'New here?',
+                          style: TextStyle(color: AppColors.textMuted),
+                        ),
+                        TextButton(
+                          onPressed: _busy ? null : _goToRegister,
+                          child: const Text('Create an account'),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 16),
-
-              // Skip button
-              TextButton(
-                onPressed: () => context.go(widget.redirectTo ?? '/'),
-                child: Text(
-                  'Continue as guest',
-                  style: TextStyle(color: Colors.grey[600]),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Guest orders are not saved to your account.',
-                style: TextStyle(color: Colors.grey[400], fontSize: 12),
-                textAlign: TextAlign.center,
-              ),
-
-              const Spacer(),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-class _BenefitRow extends StatelessWidget {
-  final IconData icon;
-  final String text;
-  const _BenefitRow({required this.icon, required this.text});
+/// Emerald gradient header shared by the sign-in and register screens.
+class AuthHeader extends StatelessWidget {
+  const AuthHeader({super.key, required this.title, required this.subtitle});
+
+  final String title;
+  final String subtitle;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return Container(
+      width: double.infinity,
+      decoration: const BoxDecoration(
+        gradient: AppColors.heroGradient,
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(32)),
+      ),
+      padding: EdgeInsets.fromLTRB(
+        24,
+        MediaQuery.of(context).padding.top + 36,
+        24,
+        36,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.18),
+                  blurRadius: 24,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Center(
+              child: Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  gradient: AppColors.primaryGradient,
+                  borderRadius: BorderRadius.circular(13),
+                ),
+                child: const Icon(
+                  Icons.diamond_rounded,
+                  size: 22,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 30,
+              fontWeight: FontWeight.w900,
+              color: Colors.white,
+              letterSpacing: -0.5,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            subtitle,
+            style: TextStyle(
+              fontSize: 15,
+              color: Colors.white.withOpacity(0.9),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class OrDivider extends StatelessWidget {
+  const OrDivider({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const Row(
       children: [
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: AppTheme.primaryColor.withOpacity(0.1),
-            shape: BoxShape.circle,
-          ),
-          child: Icon(icon, color: AppTheme.primaryColor, size: 20),
+        Expanded(child: Divider(color: AppColors.border)),
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: 12),
+          child: Text('or', style: TextStyle(color: AppColors.textMuted, fontSize: 13)),
         ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Text(
-            text,
-            style: const TextStyle(fontSize: 14, height: 1.4),
-          ),
-        ),
+        Expanded(child: Divider(color: AppColors.border)),
       ],
     );
   }
 }
 
-class _GoogleLogo extends StatelessWidget {
+class _GoogleButton extends StatelessWidget {
+  const _GoogleButton({required this.onPressed, required this.enabled});
+
+  final VoidCallback onPressed;
+  final bool enabled;
+
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 22,
-      height: 22,
-      child: CustomPaint(painter: _GoogleLogoPainter()),
+      height: 52,
+      child: OutlinedButton(
+        onPressed: enabled ? onPressed : null,
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.textPrimary,
+          backgroundColor: Colors.white,
+          side: const BorderSide(color: AppColors.border),
+        ),
+        child: const Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            GoogleLogo(),
+            SizedBox(width: 12),
+            Text(
+              'Continue with Google',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            ),
+          ],
+        ),
+      ),
     );
   }
-}
-
-class _GoogleLogoPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = size.width / 2;
-
-    // Red arc
-    final redPaint = Paint()
-      ..color = const Color(0xFFEA4335)
-      ..style = PaintingStyle.fill;
-    final redPath = Path()
-      ..moveTo(center.dx, center.dy)
-      ..arcTo(
-          Rect.fromCircle(center: center, radius: radius),
-          -1.3089, // -75 deg
-          2.0944, // 120 deg
-          false)
-      ..close();
-    canvas.drawPath(redPath, redPaint);
-
-    // Blue arc
-    final bluePaint = Paint()
-      ..color = const Color(0xFF4285F4)
-      ..style = PaintingStyle.fill;
-    final bluePath = Path()
-      ..moveTo(center.dx, center.dy)
-      ..arcTo(
-          Rect.fromCircle(center: center, radius: radius),
-          0.7854, // 45 deg
-          2.0944,
-          false)
-      ..close();
-    canvas.drawPath(bluePath, bluePaint);
-
-    // Green arc
-    final greenPaint = Paint()
-      ..color = const Color(0xFF34A853)
-      ..style = PaintingStyle.fill;
-    final greenPath = Path()
-      ..moveTo(center.dx, center.dy)
-      ..arcTo(
-          Rect.fromCircle(center: center, radius: radius),
-          2.8798,
-          2.0944,
-          false)
-      ..close();
-    canvas.drawPath(greenPath, greenPaint);
-
-    // Yellow arc
-    final yellowPaint = Paint()
-      ..color = const Color(0xFFFBBC05)
-      ..style = PaintingStyle.fill;
-    final yellowPath = Path()
-      ..moveTo(center.dx, center.dy)
-      ..arcTo(
-          Rect.fromCircle(center: center, radius: radius),
-          -1.3089,
-          -1.0472,
-          false)
-      ..close();
-    canvas.drawPath(yellowPath, yellowPaint);
-
-    // White center
-    canvas.drawCircle(
-        center, radius * 0.6, Paint()..color = Colors.white);
-  }
-
-  @override
-  bool shouldRepaint(_GoogleLogoPainter _) => false;
 }

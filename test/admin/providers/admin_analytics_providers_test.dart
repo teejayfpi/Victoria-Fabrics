@@ -73,16 +73,21 @@ Future<ProviderContainer> _container(List<AdminOrder> orders) async {
 void main() {
   group('analyticsSummaryProvider', () {
     test('aggregates revenue, orders and units within the window', () async {
+      // Anchor the orders to the first of the current month rather than
+      // "N days ago": near the start of a month, subtracting days falls into
+      // the previous month and out of the window, which made this test
+      // pass or fail depending on the calendar date.
       final now = DateTime.now();
+      final firstOfMonth = DateTime(now.year, now.month, 1);
       final container = await _container([
         _order(
             id: 'a',
-            createdAt: now.subtract(const Duration(days: 1)),
+            createdAt: firstOfMonth.add(const Duration(hours: 1)),
             total: 10000,
             customerName: 'Ada'),
         _order(
             id: 'b',
-            createdAt: now.subtract(const Duration(days: 2)),
+            createdAt: firstOfMonth.add(const Duration(hours: 2)),
             total: 5000,
             customerName: 'Bola'),
       ]);

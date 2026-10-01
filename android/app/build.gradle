@@ -20,7 +20,9 @@ if (hasReleaseSigning) {
 
 android {
     namespace = "com.fabrichaven.fabric_haven"
-    compileSdk = 34
+    // 35 is the minimum required by flutter_plugin_android_lifecycle. The
+    // platform is backward compatible, so compiling higher is safe.
+    compileSdk = 35
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -33,11 +35,30 @@ android {
     }
 
     defaultConfig {
+        // Base id; the product flavors below override it so the customer and
+        // admin builds install side by side on the same device.
         applicationId = "com.fabrichaven.fabric_haven"
         minSdk = 23  // Required for Firebase
         targetSdk = 34
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+    }
+
+    // Two apps from one codebase. Without distinct applicationIds Android
+    // treats them as the same package and prompts to *update* instead of
+    // install.
+    flavorDimensions += "app"
+    productFlavors {
+        customer {
+            dimension = "app"
+            applicationId = "com.fabrichaven.fabric_haven"
+            resValue "string", "app_name", "Victoria Fabrics"
+        }
+        admin {
+            dimension = "app"
+            applicationId = "com.fabrichaven.fabric_haven_admin"
+            resValue "string", "app_name", "VF Admin"
+        }
     }
 
     signingConfigs {

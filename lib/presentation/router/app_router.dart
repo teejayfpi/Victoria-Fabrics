@@ -12,6 +12,7 @@ import '../screens/orders_screen.dart';
 import '../screens/profile_screen.dart';
 import '../screens/search_screen.dart';
 import '../screens/sign_in_screen.dart';
+import '../screens/register_screen.dart';
 import '../screens/support_ticket_screen.dart';
 import '../screens/main_shell.dart';
 import '../screens/splash_screen.dart';
@@ -19,8 +20,10 @@ import '../screens/splash_screen.dart';
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellNavigatorKey = GlobalKey<NavigatorState>();
 
-/// Routes that require a signed-in user
-const _protectedRoutes = ['/checkout', '/orders'];
+/// The only routes reachable while signed out. Everything else requires an
+/// authenticated user, so the catalogue and account area are never exposed to
+/// anonymous visitors.
+const Set<String> _publicRoutes = {'/signin', '/register'};
 
 /// Route shown while the branded splash animation plays.
 const String splashRoute = '/splash';
@@ -29,19 +32,19 @@ final appRouter = GoRouter(
   navigatorKey: _rootNavigatorKey,
   initialLocation: splashRoute,
   redirect: (context, state) {
-    final user = FirebaseAuth.instance.currentUser;
-    final isSignedIn = user != null;
+    final isSignedIn = FirebaseAuth.instance.currentUser != null;
     final loc = state.matchedLocation;
 
     // The splash screen owns its own hand-off to the next route.
     if (loc == splashRoute) return null;
 
-    // Redirect to sign-in if trying to access a protected route
-    if (!isSignedIn && _protectedRoutes.any(loc.startsWith)) {
-      return '/signin?from=${Uri.encodeComponent(loc)}';
+    final isPublic = _publicRoutes.contains(loc);
+    if (!isSignedIn && !isPublic) {
+      // Preserve the full target (path + query) so deep links survive sign-in.
+      final from = Uri.encodeComponent(state.uri.toString());
+      return '/signin?from=$from';
     }
-    // Already signed in and going to sign-in → send home
-    if (isSignedIn && loc == '/signin') return '/';
+    if (isSignedIn && isPublic) return '/';
     return null;
   },
   routes: [
@@ -57,6 +60,14 @@ final appRouter = GoRouter(
       builder: (context, state) {
         final from = state.uri.queryParameters['from'];
         return SignInScreen(redirectTo: from);
+      },
+    ),
+
+    GoRoute(
+      path: '/register',
+      builder: (context, state) {
+        final from = state.uri.queryParameters['from'];
+        return RegisterScreen(redirectTo: from);
       },
     ),
 

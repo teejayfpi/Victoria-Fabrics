@@ -63,6 +63,7 @@ class AdminAlertService {
         NotificationService.instance.showNotification(
           title: title,
           body: bodyBuilder(added),
+          admin: true,
         );
       },
       onError: (Object error, StackTrace stack) {

@@ -35,7 +35,7 @@ void main() {
 
       try {
         await Firebase.initializeApp();
-        await NotificationService.instance.init();
+        await NotificationService.instance.init(admin: true);
       } catch (error, stack) {
         AppLogger.error('Admin startup failed', tag: 'admin_app',
             error: error, stackTrace: stack);

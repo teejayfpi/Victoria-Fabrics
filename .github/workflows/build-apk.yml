@@ -6,10 +6,22 @@ on:
   workflow_dispatch:
 
 jobs:
-  # ─── Customer App ──────────────────────────────────────────────────
-  build-customer-app:
-    name: Build Customer App APK
+  # One codebase, two installable apps. Each flavor carries its own
+  # applicationId so both install side by side instead of prompting to update
+  # the other.
+  build-apk:
+    name: Build ${{ matrix.app }} APK
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - app: customer
+            target: lib/main.dart
+            artifact: victoria-fabrics-customer
+          - app: admin
+            target: lib/main_admin.dart
+            artifact: victoria-fabrics-admin
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -51,87 +63,22 @@ jobs:
             echo "ANDROID_KEYSTORE_BASE64 not set; release APK will be debug-signed."
           fi
 
-      - name: Build debug APK (customer)
-        run: flutter build apk --debug --target lib/main.dart
+      - name: Build debug APK
+        run: flutter build apk --debug --flavor ${{ matrix.app }} --target ${{ matrix.target }}
 
-      - name: Upload customer debug APK
+      - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: victoria-fabrics-customer-debug
-          path: build/app/outputs/flutter-apk/app-debug.apk
+          name: ${{ matrix.artifact }}-debug
+          path: build/app/outputs/flutter-apk/app-${{ matrix.app }}-debug.apk
           retention-days: 30
 
-      - name: Build release APK (customer)
-        run: flutter build apk --release --target lib/main.dart
+      - name: Build release APK
+        run: flutter build apk --release --flavor ${{ matrix.app }} --target ${{ matrix.target }}
 
-      - name: Upload customer release APK
+      - name: Upload release APK
         uses: actions/upload-artifact@v4
         with:
-          name: victoria-fabrics-customer-release
-          path: build/app/outputs/flutter-apk/app-release.apk
-          retention-days: 30
-
-  # ─── Admin App ─────────────────────────────────────────────────────
-  build-admin-app:
-    name: Build Admin App APK
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          java-version: '17'
-          distribution: 'temurin'
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.24.0'
-          channel: 'stable'
-          cache: true
-
-      - name: Install dependencies
-        run: flutter pub get
-
-      - name: Generate splash screen
-        run: dart run flutter_native_splash:create
-
-      - name: Decode release keystore
-        # `secrets` is not allowed in a step-level `if`, so gate inside the
-        # script. Without the secret the build still works, signed with the
-        # debug key (see android/app/build.gradle).
-        run: |
-          if [ -n "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ]; then
-            echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/app/upload-keystore.jks
-            cat > android/key.properties <<EOF
-          storePassword=${{ secrets.KEYSTORE_PASSWORD }}
-          keyPassword=${{ secrets.KEY_PASSWORD }}
-          keyAlias=${{ secrets.KEY_ALIAS }}
-          storeFile=upload-keystore.jks
-          EOF
-            echo "Release signing configured."
-          else
-            echo "ANDROID_KEYSTORE_BASE64 not set; release APK will be debug-signed."
-          fi
-
-      - name: Build debug APK (admin)
-        run: flutter build apk --debug --target lib/main_admin.dart
-
-      - name: Upload admin debug APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: victoria-fabrics-admin-debug
-          path: build/app/outputs/flutter-apk/app-debug.apk
-          retention-days: 30
-
-      - name: Build release APK (admin)
-        run: flutter build apk --release --target lib/main_admin.dart
-
-      - name: Upload admin release APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: victoria-fabrics-admin-release
-          path: build/app/outputs/flutter-apk/app-release.apk
+          name: ${{ matrix.artifact }}-release
+          path: build/app/outputs/flutter-apk/app-${{ matrix.app }}-release.apk
           retention-days: 30

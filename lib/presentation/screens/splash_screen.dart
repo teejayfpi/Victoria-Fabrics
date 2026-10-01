@@ -1,18 +1,17 @@
 import 'dart:async';
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/constants/app_constants.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/particles.dart';
 
-/// Enterprise splash screen.
+/// Branded launch screen for the customer app.
 ///
-/// Layers the store hero photograph behind an emerald scrim, animated
-/// particles and brand reveal, then hands off to the router once the auth
-/// state has settled.
+/// Emerald gradient, drifting particles, accent glows and a staggered brand
+/// reveal, then hands off to the router once the auth state has settled.
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
 
@@ -22,8 +21,7 @@ class SplashScreen extends ConsumerStatefulWidget {
 
 class _SplashScreenState extends ConsumerState<SplashScreen>
     with TickerProviderStateMixin {
-  /// Minimum time the splash stays visible so the brand reveal is seen.
-  /// Keep this short — every millisecond here is launch latency.
+  /// Minimum time the brand reveal stays visible. Short — it is launch latency.
   static const Duration _minDisplay = Duration(seconds: 2);
 
   bool _routed = false;
@@ -34,29 +32,17 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   late AnimationController _textController;
   late AnimationController _particlesController;
   late AnimationController _loadingController;
-  late AnimationController _heroController;
 
   late Animation<double> _logoScale;
   late Animation<double> _logoOpacity;
   late Animation<Offset> _textSlide;
   late Animation<double> _textOpacity;
   late Animation<double> _loadingOpacity;
-  late Animation<double> _heroScale;
 
   @override
   void initState() {
     super.initState();
 
-    _heroController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 12),
-    );
-    _heroScale = Tween<double>(begin: 1.0, end: 1.08).animate(
-      CurvedAnimation(parent: _heroController, curve: Curves.easeOut),
-    );
-    _heroController.forward();
-
-    // Logo animation
     _logoController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),
@@ -74,7 +60,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       ),
     );
 
-    // Text animation
     _textController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 800),
@@ -89,13 +74,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       CurvedAnimation(parent: _textController, curve: Curves.easeOut),
     );
 
-    // Particles animation
     _particlesController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 4),
     )..repeat();
 
-    // Loading animation
     _loadingController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 600),
@@ -126,14 +109,16 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     _textController.dispose();
     _particlesController.dispose();
     _loadingController.dispose();
-    _heroController.dispose();
     super.dispose();
   }
 
   void _route() {
     if (_routed || !mounted) return;
     _routed = true;
-    context.go('/');
+    // The router redirect sends signed-out visitors to /signin, so home is
+    // only ever reached with a session.
+    final signedIn = ref.read(authStateProvider).valueOrNull != null;
+    context.go(signedIn ? '/' : '/signin');
   }
 
   @override
@@ -148,22 +133,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // Store hero photograph
-          AnimatedBuilder(
-            animation: _heroScale,
-            builder: (context, child) => Transform.scale(
-              scale: _heroScale.value,
-              child: child,
-            ),
-            child: Image.asset(
-              'assets/images/splash.jpg',
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) =>
-                  const ColoredBox(color: AppColors.primaryDark),
-            ),
-          ),
-
-          // Fallback gradient behind transparent parts of the artwork
+          // Background gradient
           const DecoratedBox(
             decoration: BoxDecoration(gradient: AppColors.heroGradient),
             child: SizedBox.expand(),
@@ -181,7 +151,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
             ),
           ),
 
-          // Accent glow
+          // Accent glows
           Positioned(
             top: -100,
             right: -100,
@@ -209,7 +179,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
                   colors: [
-                    AppColors.primaryLight.withOpacity(0.25),
+                    AppColors.primaryLight.withOpacity(0.2),
                     Colors.transparent,
                   ],
                 ),
@@ -228,7 +198,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
             child: LayoutBuilder(
               builder: (context, constraints) => SingleChildScrollView(
                 // Bottom-anchored when there is room, scrollable when a short
-                // or narrow device cannot fit the brand block.
+                // device cannot fit the brand block.
                 child: ConstrainedBox(
                   constraints: BoxConstraints(minHeight: constraints.maxHeight),
                   child: Padding(
@@ -246,11 +216,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                               child: Transform.scale(
                                 scale: _logoScale.value,
                                 child: Container(
-                                  width: 112,
-                                  height: 112,
+                                  width: 120,
+                                  height: 120,
                                   decoration: BoxDecoration(
                                     color: Colors.white,
-                                    borderRadius: BorderRadius.circular(30),
+                                    borderRadius: BorderRadius.circular(32),
                                     boxShadow: [
                                       BoxShadow(
                                         color: Colors.black.withOpacity(0.2),
@@ -267,15 +237,15 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                                   ),
                                   child: Center(
                                     child: Container(
-                                      width: 72,
-                                      height: 72,
+                                      width: 78,
+                                      height: 78,
                                       decoration: BoxDecoration(
                                         gradient: AppColors.primaryGradient,
-                                        borderRadius: BorderRadius.circular(22),
+                                        borderRadius: BorderRadius.circular(24),
                                       ),
                                       child: const Icon(
                                         Icons.diamond_rounded,
-                                        size: 36,
+                                        size: 40,
                                         color: Colors.white,
                                       ),
                                     ),
@@ -288,7 +258,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
                         const SizedBox(height: 40),
 
-                        // Brand name and tagline
+                        // Brand name, tagline and feature pills
                         SlideTransition(
                           position: _textSlide,
                           child: FadeTransition(
@@ -305,7 +275,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                                   ),
                                 ),
                                 const SizedBox(height: 20),
-
                                 ShaderMask(
                                   shaderCallback: (bounds) =>
                                       const LinearGradient(
@@ -315,7 +284,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                                     fit: BoxFit.scaleDown,
                                     alignment: Alignment.centerLeft,
                                     child: Text(
-                                      'Victoria Fabrics',
+                                      AppConstants.appName,
                                       style: TextStyle(
                                         fontSize: 42,
                                         fontWeight: FontWeight.w900,
@@ -327,9 +296,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                                   ),
                                 ),
                                 const SizedBox(height: 12),
-
                                 Text(
-                                  'Premium Ankara, Lace & Cotton, delivered.',
+                                  AppConstants.appTagline,
                                   style: TextStyle(
                                     fontSize: 16,
                                     color: Colors.white.withOpacity(0.9),
@@ -338,8 +306,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                                   ),
                                 ),
                                 const SizedBox(height: 32),
-
-                                // Feature pills
                                 const Wrap(
                                   spacing: 10,
                                   runSpacing: 10,
@@ -378,7 +344,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                                   height: 20,
                                   child: CircularProgressIndicator(
                                     valueColor: AlwaysStoppedAnimation(
-                                        AppColors.accent),
+                                      AppColors.accent,
+                                    ),
                                     strokeWidth: 2.5,
                                   ),
                                 ),
@@ -413,16 +380,16 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   String _loadingLabel(AsyncValue<Object?> auth) {
     if (_routed) return 'Opening…';
     if (auth.isLoading) return 'Starting up…';
-    if (!_minDisplayElapsed) return 'Welcome to Victoria Fabrics…';
+    if (!_minDisplayElapsed) return 'Welcome to ${AppConstants.appName}…';
     return 'Ready';
   }
 }
 
 class _FeaturePill extends StatelessWidget {
+  const _FeaturePill({required this.icon, required this.label});
+
   final IconData icon;
   final String label;
-
-  const _FeaturePill({required this.icon, required this.label});
 
   @override
   Widget build(BuildContext context) {
@@ -449,46 +416,5 @@ class _FeaturePill extends StatelessWidget {
         ],
       ),
     );
-  }
-}
-
-/// Custom painter for the drifting background particles.
-class ParticlesPainter extends CustomPainter {
-  final double progress;
-  final Color color;
-
-  ParticlesPainter({required this.progress, required this.color});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.fill;
-
-    // Seeded so the particle field is stable across repaints.
-    final random = math.Random(42);
-
-    for (int i = 0; i < 30; i++) {
-      final x = random.nextDouble() * size.width;
-      final y = random.nextDouble() * size.height;
-      final radius = random.nextDouble() * 3 + 1;
-      final speed = random.nextDouble() * 0.5 + 0.1;
-      final angle = random.nextDouble() * math.pi * 2;
-
-      final offset = Offset(
-        x + math.sin(angle + progress * 2) * 20 * speed,
-        y -
-            progress * size.height * speed * 0.3 +
-            math.cos(angle + progress * 2) * 15 * speed,
-      );
-
-      paint.color = color.withOpacity(0.3 + random.nextDouble() * 0.4);
-      canvas.drawCircle(offset, radius, paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(ParticlesPainter oldDelegate) {
-    return oldDelegate.progress != progress;
   }
 }

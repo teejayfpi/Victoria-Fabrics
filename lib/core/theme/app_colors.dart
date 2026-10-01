@@ -124,6 +124,24 @@ class AppColors {
   static const Color inputDisabled = Color(0xFFF0F4F3);
 
   // ===========================================================================
+  // ORDER STATUS COLORS
+  // ===========================================================================
+  static const Color statusPending = Color(0xFFF59E0B);
+  static const Color statusPendingBg = Color(0xFFFFF8E1);
+  static const Color statusProcessing = Color(0xFF3B82F6);
+  static const Color statusProcessingBg = Color(0xFFEFF6FF);
+  static const Color statusDelivered = Color(0xFF10B981);
+  static const Color statusDeliveredBg = Color(0xFFE8FDF5);
+  static const Color statusCancelled = Color(0xFFDC3545);
+  static const Color statusCancelledBg = Color(0xFFFFEBEE);
+
+  // ===========================================================================
+  // SHIMMER / SKELETON LOADING
+  // ===========================================================================
+  static const Color shimmerBase = Color(0xFFE8EDEA);
+  static const Color shimmerHighlight = Color(0xFFF5F7F6);
+
+  // ===========================================================================
   // PREMIUM GRADIENTS
   // ===========================================================================
   static const LinearGradient heroGradient = LinearGradient(

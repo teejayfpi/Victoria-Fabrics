@@ -74,6 +74,58 @@ class AuthController extends StateNotifier<AsyncValue<void>> {
     ]);
     state = const AsyncValue.data(null);
   }
+
+  /// Creates an account and, when Firebase is configured to require it, sends
+  /// the verification email. Returns true when a session was established.
+  Future<bool> registerWithEmail({
+    required String email,
+    required String password,
+    String? displayName,
+  }) async {
+    state = const AsyncValue.loading();
+    try {
+      final credential = await _auth.createUserWithEmailAndPassword(
+        email: email.trim(),
+        password: password,
+      );
+      final user = credential.user;
+      if (user == null) {
+        state = const AsyncValue.data(null);
+        return false;
+      }
+      if (displayName != null && displayName.trim().isNotEmpty) {
+        await user.updateDisplayName(displayName.trim());
+      }
+      await user.sendEmailVerification();
+      state = const AsyncValue.data(null);
+      return true;
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+      rethrow;
+    }
+  }
+
+  Future<bool> signInWithEmail({
+    required String email,
+    required String password,
+  }) async {
+    state = const AsyncValue.loading();
+    try {
+      await _auth.signInWithEmailAndPassword(
+        email: email.trim(),
+        password: password,
+      );
+      state = const AsyncValue.data(null);
+      return _auth.currentUser != null;
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+      rethrow;
+    }
+  }
+
+  Future<void> sendPasswordReset(String email) {
+    return _auth.sendPasswordResetEmail(email: email.trim());
+  }
 }
 
 String authErrorMessage(Object error) {
@@ -91,8 +143,20 @@ String authErrorMessage(Object error) {
         return 'This account has been disabled. Please contact support.';
       case 'account-exists-with-different-credential':
         return 'This email is already registered with another sign-in method.';
+      case 'email-already-in-use':
+        return 'An account already exists for this email. Try signing in.';
+      case 'weak-password':
+        return 'Choose a stronger password (at least 6 characters).';
+      case 'invalid-email':
+        return 'That email address does not look valid.';
+      case 'user-not-found':
+        return 'No account found for that email. Try creating one.';
+      case 'wrong-password':
+        return 'Incorrect password. Try again or reset it.';
+      case 'too-many-requests':
+        return 'Too many attempts. Please wait a moment and try again.';
       default:
-        return 'Google sign-in failed. Please try again.';
+        return 'Sign-in failed. Please try again.';
     }
   }
 

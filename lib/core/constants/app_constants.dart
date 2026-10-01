@@ -8,6 +8,9 @@ class AppConstants {
   AppConstants._();
 
   static const String appName = 'Victoria Fabrics';
+  static const String adminAppName = 'VF Admin';
+  static const String appTagline =
+      'Premium Ankara, Lace & Cotton, delivered.';
   static const String currencySymbol = '₦';
   static const String currencyCode = 'NGN';
 
