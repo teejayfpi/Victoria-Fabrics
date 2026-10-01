@@ -42,7 +42,7 @@ dependencies:
   # Used for the inline-image fallback when Firebase Storage is unavailable.
   image: ^4.1.7
   intl: ^0.19.0
-  uuid: ^4.4.0
+  uuid: ^4.6.0
 
   # Firebase
   firebase_core: ^3.6.0
