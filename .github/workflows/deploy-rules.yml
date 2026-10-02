@@ -54,6 +54,8 @@ jobs:
         run: |
           printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/firebase-sa.json"
           echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/firebase-sa.json" >> "$GITHUB_ENV"
+          # A stale FIREBASE_TOKEN would otherwise take precedence over the key.
+          echo "FIREBASE_TOKEN=" >> "$GITHUB_ENV"
 
       - name: Warn when no credential is configured
         if: env.FIREBASE_SERVICE_ACCOUNT == '' && env.FIREBASE_TOKEN == ''
