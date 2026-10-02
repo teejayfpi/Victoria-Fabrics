@@ -87,6 +87,18 @@ mirrors the rules' 10-line ceiling — change both together.
 
 - `AppLogger` for all logging, tagged by area (`admin_products`, `firestore`).
 - Errors surface through `ErrorMapper`; user-facing copy stays plain.
+- Per-customer data (wishlist, delivery addresses, notification preferences)
+  lives as arrays/fields on the single `users/{uid}` document, reached through
+  `UserRepository` → `user_profile_provider.dart`. The existing
+  `users/{uid}` rule (`request.auth.uid == uid`) already scopes it; add new
+  customer data there rather than opening a new collection. `SavedAddress`
+  and `NotificationPreferences` are the shapes to extend.
+- Address defaults are normalised by the pure `normaliseAddressDefaults()`;
+  keep that invariant (exactly one default) in one place so checkout's
+  pre-fill never reads a list without a default.
+- `ProductCard`'s `isWishlisted`/`onToggleWishlist` are optional so the card
+  stays usable outside a `ProviderScope` (widget tests). A null `isWishlisted`
+  hides the heart.
 - Widget tests use `ProviderScope` overrides, and layout tests pump at
   320/390/1024 pt widths and assert `tester.takeException()` is null, which
   catches RenderFlex overflows.

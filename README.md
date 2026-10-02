@@ -25,13 +25,17 @@ After each push to `main`, GitHub Actions builds both apps automatically.
 
 ## Admin Access
 
-Admin accounts are provisioned server-side in Firebase Authentication and
-granted a role in the `admins` Firestore collection. There are **no shared
-credentials in this repository** — never commit admin logins to source.
+The admin app signs in with **Firebase Auth email + password**, then checks the
+account against a `role` custom claim or an `admins/{uid}` Firestore document.
+There are **no shared credentials in this repository** — never commit admin
+logins to source, and `_bootstrapAdmins` in `admin_auth_provider.dart` stays
+empty.
+
+To create the first administrator, see **[docs/admin-setup.md](docs/admin-setup.md)**.
 
 ## Tech Stack
 
-- Flutter 3.24 / Dart 3.5
+- Flutter 3.47.5 / Dart 3.13
 - Firebase (Auth + Firestore)
 - Riverpod (state management)
 - GoRouter (navigation)
