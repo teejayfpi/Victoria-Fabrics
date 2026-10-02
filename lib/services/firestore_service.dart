@@ -10,6 +10,7 @@ import '../domain/entities/cart_item.dart';
 import '../domain/entities/category.dart';
 import '../domain/entities/order.dart';
 import '../domain/entities/product.dart';
+import '../domain/entities/store_settings.dart';
 import '../domain/entities/ticket.dart';
 import '../domain/entities/user_profile.dart';
 import '../data/datasources/mock_data_source.dart';
@@ -32,6 +33,9 @@ class FirestoreService {
       _db.collection(AppConfig.categoriesCollection);
   CollectionReference<Map<String, dynamic>> get _users =>
       _db.collection(AppConfig.usersCollection);
+  DocumentReference<Map<String, dynamic>> get _storeSettings => _db
+      .collection(AppConfig.settingsCollection)
+      .doc(AppConfig.storeSettingsDoc);
 
   // ─── Products ─────────────────────────────────────────────────────
 
@@ -346,6 +350,20 @@ class FirestoreService {
     Map<String, dynamic> data,
   ) async {
     await _users.doc(uid).set(data, SetOptions(merge: true));
+  }
+
+  // ─── Store settings ───────────────────────────────────────────────
+
+  /// Live `settings/store` document, defaulted when it has never been written.
+  /// World-readable, so the storefront can show the delivery fee before
+  /// checkout.
+  Stream<StoreSettings> storeSettingsStream() => _storeSettings
+      .snapshots()
+      .map((snap) => StoreSettings.fromMap(snap.data()));
+
+  /// Persists the store settings. Staff-only per the security rules.
+  Future<void> saveStoreSettings(StoreSettings settings) async {
+    await _storeSettings.set(settings.toMap());
   }
 
   // ─── Seed ─────────────────────────────────────────────────────────

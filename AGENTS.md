@@ -99,6 +99,18 @@ mirrors the rules' 10-line ceiling — change both together.
 - `ProductCard`'s `isWishlisted`/`onToggleWishlist` are optional so the card
   stays usable outside a `ProviderScope` (widget tests). A null `isWishlisted`
   hides the heart.
+- Store-wide, owner-editable values (store name, pickup address, delivery
+  fee, delivery/pickup availability, contact details) live in the single
+  `settings/store` document behind `StoreSettings` → `SettingsRepository` →
+  `storeSettingsProvider` (and the raw `storeSettingsStreamProvider`). It is
+  world-readable (the storefront shows the fee and
+  address before sign-in) and staff-writable, and holds no secrets — never put
+  a key or token there. Checkout reads the fee and availability from it rather
+  than any hard-coded constant; `StoreSettings` falls back to the compiled
+  defaults (`AppConstants`, `PaymentConstants`) when the document is absent or
+  a field is malformed, so a missing document degrades to today's behaviour.
+- An admin may edit only their own `admins/{uid}` profile fields (`name`,
+  `phone`, `email`); `role` stays server-side so staff cannot self-promote.
 - Widget tests use `ProviderScope` overrides, and layout tests pump at
   320/390/1024 pt widths and assert `tester.takeException()` is null, which
   catches RenderFlex overflows.

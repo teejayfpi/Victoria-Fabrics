@@ -11,6 +11,8 @@ import '../screens/admin_order_detail_screen.dart';
 import '../screens/admin_categories_screen.dart';
 import '../screens/admin_analytics_screen.dart';
 import '../screens/admin_tickets_screen.dart';
+import '../screens/admin_settings_screen.dart';
+import '../screens/admin_profile_screen.dart';
 import '../screens/admin_splash_screen.dart';
 import '../../domain/entities/product.dart';
 import '../providers/admin_data_providers.dart';
@@ -90,6 +92,14 @@ final adminRouter = GoRouter(
         GoRoute(
           path: 'tickets',
           builder: (context, state) => const AdminTicketsScreen(),
+        ),
+        GoRoute(
+          path: 'settings',
+          builder: (context, state) => const AdminSettingsScreen(),
+        ),
+        GoRoute(
+          path: 'profile',
+          builder: (context, state) => const AdminProfileScreen(),
         ),
       ],
     ),

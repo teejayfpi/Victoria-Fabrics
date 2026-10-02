@@ -14,6 +14,8 @@ import '../screens/search_screen.dart';
 import '../screens/wishlist_screen.dart';
 import '../screens/addresses_screen.dart';
 import '../screens/notification_settings_screen.dart';
+import '../screens/edit_profile_screen.dart';
+import '../screens/store_info_screen.dart';
 import '../screens/sign_in_screen.dart';
 import '../screens/register_screen.dart';
 import '../screens/support_ticket_screen.dart';
@@ -143,6 +145,14 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/notification-settings',
       builder: (context, state) => const NotificationSettingsScreen(),
+    ),
+    GoRoute(
+      path: '/edit-profile',
+      builder: (context, state) => const EditProfileScreen(),
+    ),
+    GoRoute(
+      path: '/store-info',
+      builder: (context, state) => const StoreInfoScreen(),
     ),
   ],
 );

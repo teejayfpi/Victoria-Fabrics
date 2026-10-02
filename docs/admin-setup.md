@@ -104,8 +104,10 @@ block it, and no Cloud Function or billing account is needed.
 3. Launch the admin app and sign in with that email and password.
 
 The client only ever *reads* its own `admins/{uid}` document (rules allow
-`request.auth.uid == uid`); all writes are server-side, so this document cannot
-be forged or escalated from the app.
+`request.auth.uid == uid`). It may update only its own display fields (`name`,
+`phone`, `email`) — the rules reject any change that touches `role` or adds a
+new key, so an account cannot escalate itself from the app. Everything else
+about the roster stays server-side.
 
 ## Promoting an existing account
 
@@ -119,6 +121,32 @@ This works for Google-signed-in customer accounts too.
 custom claim and the roster document atomically. They require the caller to be a
 `superAdmin`, so the **first** super admin still has to be seeded by hand as
 above (with `role` = `superAdmin`). These functions need the Blaze plan.
+
+## Store settings (no billing account needed)
+
+Store-wide values the owner can change without a code release live in a single
+document, `settings/store`:
+
+| Field | Meaning |
+| --- | --- |
+| `storeName` | Name shown in the app and on the store-info screen |
+| `addressLine`, `city`, `state` | Pickup location; may be left blank |
+| `deliveryFee` | Flat delivery fee in naira (0 shows "Free delivery") |
+| `deliveryEnabled`, `pickupEnabled` | Which fulfilment methods are offered |
+| `contactPhone`, `contactWhatsapp`, `contactEmail` | Support contact details |
+
+Edit them in the admin app under **Settings** (admin menu, or the dashboard
+quick action). The rules make the document world-readable and staff-writable,
+and it holds no secrets, so do not put a key or token in it.
+
+If the document is missing or a field is malformed, the app falls back to the
+values compiled into `AppConstants` and `PaymentConstants` — the same behaviour
+as before this document existed — so the storefront never breaks because the
+settings document has not been created yet.
+
+The customer checkout reads `deliveryFee` and the availability flags from here
+and prices the order accordingly; the customer store-info screen shows the
+address, fee and contact details.
 
 ## Security notes
 

@@ -60,4 +60,9 @@ class AppConfig {
   static const String ticketsCollection = 'tickets';
   static const String usersCollection = 'users';
   static const String adminsCollection = 'admins';
+  static const String settingsCollection = 'settings';
+
+  /// Single document holding the owner-editable store settings (delivery fee,
+  /// shop address, contact details).
+  static const String storeSettingsDoc = 'store';
 }

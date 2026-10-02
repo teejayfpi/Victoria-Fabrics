@@ -49,9 +49,14 @@ class AdminDashboardScreen extends ConsumerWidget {
           PopupMenuButton<String>(
             icon: const Icon(Icons.account_circle),
             onSelected: (value) {
-              if (value == 'logout') {
-                ref.read(adminAuthProvider.notifier).logout();
-                context.go('/admin/login');
+              switch (value) {
+                case 'profile':
+                  context.push('/admin/profile');
+                case 'settings':
+                  context.push('/admin/settings');
+                case 'logout':
+                  ref.read(adminAuthProvider.notifier).logout();
+                  context.go('/admin/login');
               }
             },
             itemBuilder: (context) => [
@@ -66,6 +71,27 @@ class AdminDashboardScreen extends ConsumerWidget {
                     Text(admin?.email ?? '',
                         style: TextStyle(
                             fontSize: 12, color: Colors.grey[600])),
+                  ],
+                ),
+              ),
+              const PopupMenuDivider(),
+              const PopupMenuItem(
+                value: 'profile',
+                child: Row(
+                  children: [
+                    Icon(Icons.person_outline, size: 20),
+                    SizedBox(width: 8),
+                    Text('My Profile'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'settings',
+                child: Row(
+                  children: [
+                    Icon(Icons.settings_outlined, size: 20),
+                    SizedBox(width: 8),
+                    Text('Store Settings'),
                   ],
                 ),
               ),
@@ -155,22 +181,26 @@ class AdminDashboardScreen extends ConsumerWidget {
                     title: 'Total Products',
                     value: '${stats.productCount}',
                     icon: Icons.inventory_2,
-                    color: Colors.blue),
+                    color: Colors.blue,
+                    onTap: () => context.push('/admin/products')),
                 _StatCard(
                     title: 'Pending Orders',
                     value: '${stats.pendingOrders}',
                     icon: Icons.pending_actions,
-                    color: Colors.orange),
+                    color: Colors.orange,
+                    onTap: () => context.push('/admin/orders')),
                 _StatCard(
                     title: "Today's Sales",
                     value: _compactCurrency(stats.todaySales),
                     icon: Icons.trending_up,
-                    color: Colors.green),
+                    color: Colors.green,
+                    onTap: () => context.push('/admin/analytics')),
                 _StatCard(
                     title: 'Open Tickets',
                     value: '${stats.openTickets}',
                     icon: Icons.confirmation_number,
-                    color: Colors.purple),
+                    color: Colors.purple,
+                    onTap: () => context.push('/admin/tickets')),
               ],
             ),
             const SizedBox(height: 24),
@@ -223,6 +253,28 @@ class AdminDashboardScreen extends ConsumerWidget {
                     color: Colors.green,
                     onTap: () =>
                         context.push('/admin/analytics'),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _QuickActionCard(
+                    icon: Icons.inventory_2,
+                    title: 'Products',
+                    color: Colors.indigo,
+                    onTap: () => context.push('/admin/products'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _QuickActionCard(
+                    icon: Icons.settings,
+                    title: 'Store Settings',
+                    color: Colors.teal,
+                    onTap: () => context.push('/admin/settings'),
                   ),
                 ),
               ],
@@ -327,50 +379,56 @@ class _StatCard extends StatelessWidget {
   final String value;
   final IconData icon;
   final Color color;
+  final VoidCallback? onTap;
 
   const _StatCard({
     required this.title,
     required this.value,
     required this.icon,
     required this.color,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(icon, color: color, size: 22),
                   ),
-                  child: Icon(icon, color: color, size: 22),
-                ),
-                const Icon(Icons.circle,
-                    size: 8, color: Colors.green),
-              ],
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(value,
-                    style: const TextStyle(
-                        fontSize: 18, fontWeight: FontWeight.bold)),
-                Text(title,
-                    style: TextStyle(
-                        color: Colors.grey[600], fontSize: 12)),
-              ],
-            ),
-          ],
+                  Icon(Icons.chevron_right,
+                      size: 18, color: Colors.grey[400]),
+                ],
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(value,
+                      style: const TextStyle(
+                          fontSize: 18, fontWeight: FontWeight.bold)),
+                  Text(title,
+                      style: TextStyle(
+                          color: Colors.grey[600], fontSize: 12)),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -515,7 +573,10 @@ class _OrderTile extends StatelessWidget {
           ),
         ],
       ),
-      onTap: () => context.push('/admin/orders'),
+      onTap: () => context.push(
+        '/admin/orders/${adminOrder.firestoreId}',
+        extra: adminOrder,
+      ),
     );
   }
 }

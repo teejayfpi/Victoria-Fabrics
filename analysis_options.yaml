@@ -6,6 +6,9 @@ analyzer:
   exclude:
     - build/**
     - android/**
+    # Firebase CLI installs Dart function templates under here; they are not
+    # part of this app and reference packages the app does not depend on.
+    - firestore-rules-tests/node_modules/**
 
 linter:
   rules:

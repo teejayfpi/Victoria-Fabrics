@@ -98,6 +98,31 @@ async function main() {
   await expectAllowed('anonymous can read the catalogue', anon,
     (db) => db.collection('products').limit(5).get());
 
+  // ── Store settings: world-readable, staff-only writes ────────────────────
+  // The storefront reads the delivery fee before sign-in, so an anonymous read
+  // must succeed; a stranger must not be able to change the fee.
+  await expectAllowed('anonymous can read store settings', anon,
+    (db) => db.collection('settings').doc('store').get());
+  await expectDenied('anonymous cannot write store settings', anon,
+    (db) => db.collection('settings').doc('store').set({ 'deliveryFee': 0 }));
+  await expectAllowed('roster admin can write store settings', rosterAdmin,
+    (db) => db.collection('settings').doc('store').set({
+      'deliveryFee': 3500,
+      'storeName': 'Victoria Fabrics',
+    }));
+  await expectDenied('viewer cannot write store settings', viewer,
+    (db) => db.collection('settings').doc('store').set({ 'deliveryFee': 0 }));
+
+  // ── Admin self-profile edit, without a privilege-escalation hole ─────────
+  await expectAllowed('admin edits own profile name', rosterAdmin,
+    (db) => db.collection('admins').doc('roster-admin').update({ 'name': 'Ada' }));
+  await expectDenied('admin cannot change own role', rosterAdmin,
+    (db) => db.collection('admins').doc('roster-admin').update({ 'role': 'superAdmin' }));
+  await expectDenied('admin cannot edit another admin', rosterAdmin,
+    (db) => db.collection('admins').doc('viewer-user').update({ 'name': 'Mallory' }));
+  await expectDenied('viewer cannot edit own profile', viewer,
+    (db) => db.collection('admins').doc('viewer-user').update({ 'name': 'Nope' }));
+
   await env.cleanup();
 
   const failed = results.filter(([, ok]) => !ok).length;

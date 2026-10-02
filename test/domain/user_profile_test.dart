@@ -100,5 +100,21 @@ void main() {
 
       expect(profile.wishlistIds, ['p1']);
     });
+
+    test('reads the editable contact details', () {
+      final profile = UserProfile.fromMap({
+        'displayName': 'Ada Obi',
+        'phone': '08030000000',
+      });
+
+      expect(profile.displayName, 'Ada Obi');
+      expect(profile.phone, '08030000000');
+    });
+
+    test('contact details default to empty when absent', () {
+      final profile = UserProfile.fromMap({'wishlist': ['p1']});
+      expect(profile.displayName, isEmpty);
+      expect(profile.phone, isEmpty);
+    });
   });
 }

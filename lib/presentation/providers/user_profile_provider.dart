@@ -90,6 +90,22 @@ class UserDataController {
     await _ref.read(userRepositoryProvider).setWishlist(uid, next);
   }
 
+  // ─── Contact details ──────────────────────────────────────────────
+
+  /// Saves the customer's name and phone to their profile document.
+  Future<void> saveContactDetails({
+    required String displayName,
+    required String phone,
+  }) async {
+    final uid = _uid;
+    if (uid == null) return;
+    await _ref.read(userRepositoryProvider).setContactDetails(
+          uid,
+          displayName: displayName.trim(),
+          phone: phone.trim(),
+        );
+  }
+
   // ─── Addresses ────────────────────────────────────────────────────
 
   /// Inserts or replaces [address]. A newly added address becomes the default

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/error/error_mapper.dart';
 import '../providers/cart_provider.dart';
 import '../providers/order_provider.dart';
+import '../providers/settings_provider.dart';
 import '../providers/user_profile_provider.dart';
 import '../../domain/entities/order.dart';
 import '../../core/theme/app_theme.dart';
@@ -17,6 +18,17 @@ class CheckoutScreen extends ConsumerStatefulWidget {
 
   @override
   ConsumerState<CheckoutScreen> createState() => _CheckoutScreenState();
+}
+
+/// Formats a naira amount with thousands separators, e.g. `₦12,500`.
+String _naira(double amount) {
+  final whole = amount.toStringAsFixed(0);
+  final buffer = StringBuffer();
+  for (var i = 0; i < whole.length; i++) {
+    if (i > 0 && (whole.length - i) % 3 == 0) buffer.write(',');
+    buffer.write(whole[i]);
+  }
+  return '₦$buffer';
 }
 
 class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
@@ -40,10 +52,20 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   void _prefillFromAuth() {
     if (_prefilled) return;
     final user = ref.read(currentUserProvider);
-    if (user != null) {
-      if (user.displayName != null && _nameController.text.isEmpty) {
-        _nameController.text = user.displayName!;
+    final profile = ref.read(userProfileValueProvider);
+
+    // Prefer the customer's saved profile details, then the Google account,
+    // then a saved address. This is why a returning customer does not retype
+    // their name and phone at checkout.
+    if (_nameController.text.isEmpty) {
+      if (profile.displayName.isNotEmpty) {
+        _nameController.text = profile.displayName;
+      } else if (user?.displayName != null) {
+        _nameController.text = user!.displayName!;
       }
+    }
+    if (_phoneController.text.isEmpty && profile.phone.isNotEmpty) {
+      _phoneController.text = profile.phone;
     }
 
     final address = ref.read(userDataControllerProvider).defaultAddress();
@@ -59,6 +81,30 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       }
     }
     _prefilled = true;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // A store may offer only one fulfilment method; start on whichever is
+    // enabled so the customer never sees a disabled choice pre-selected.
+    final settings = ref.read(storeSettingsProvider);
+    if (!settings.deliveryEnabled && settings.pickupEnabled) {
+      _deliveryType = DeliveryType.pickup;
+    } else if (settings.deliveryEnabled && !settings.pickupEnabled) {
+      _deliveryType = DeliveryType.delivery;
+    }
+  }
+
+  /// Explains why a fulfilment option cannot be chosen, instead of silently
+  /// ignoring the tap.
+  void _showUnavailable(BuildContext context, String method) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('$method is not available at the moment.'),
+        duration: const Duration(seconds: 2),
+      ),
+    );
   }
 
   Future<void> _placeOrder() async {
@@ -78,7 +124,11 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     }
 
     final cartItems = ref.read(cartProvider);
-    final totalAmount = ref.read(cartTotalProvider);
+    final settings = ref.read(storeSettingsProvider);
+    final subtotal = ref.read(cartTotalProvider);
+    final totalAmount = _deliveryType == DeliveryType.delivery
+        ? subtotal + settings.deliveryFee
+        : subtotal;
 
     try {
       await ref.read(orderNotifierProvider.notifier).createOrder(
@@ -89,7 +139,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 ? _addressController.text
                 : null,
             pickupLocation: _deliveryType == DeliveryType.pickup
-                ? 'Victoria Fabrics Store, Lagos'
+                ? settings.pickupLocation
                 : null,
             customerName: _nameController.text,
             customerPhone: _phoneController.text,
@@ -115,8 +165,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     _prefillFromAuth();
 
     final totalAmount = ref.watch(cartTotalProvider);
+    final settings = ref.watch(storeSettingsProvider);
+    final deliveryFee = settings.deliveryFee;
     final grandTotal = _deliveryType == DeliveryType.delivery
-        ? totalAmount + 2500
+        ? totalAmount + deliveryFee
         : totalAmount;
 
     return Scaffold(
@@ -137,10 +189,14 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                     child: _DeliveryTypeCard(
                       icon: Icons.local_shipping,
                       title: 'Delivery',
-                      subtitle: 'To your address',
+                      subtitle: settings.deliveryEnabled
+                          ? 'To your address'
+                          : 'Unavailable',
                       isSelected: _deliveryType == DeliveryType.delivery,
-                      onTap: () =>
-                          setState(() => _deliveryType = DeliveryType.delivery),
+                      enabled: settings.deliveryEnabled,
+                      onTap: () => settings.deliveryEnabled
+                          ? setState(() => _deliveryType = DeliveryType.delivery)
+                          : _showUnavailable(context, 'Delivery'),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -148,10 +204,14 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                     child: _DeliveryTypeCard(
                       icon: Icons.store,
                       title: 'Pickup',
-                      subtitle: 'From our store',
+                      subtitle: settings.pickupEnabled
+                          ? 'From our store'
+                          : 'Unavailable',
                       isSelected: _deliveryType == DeliveryType.pickup,
-                      onTap: () =>
-                          setState(() => _deliveryType = DeliveryType.pickup),
+                      enabled: settings.pickupEnabled,
+                      onTap: () => settings.pickupEnabled
+                          ? setState(() => _deliveryType = DeliveryType.pickup)
+                          : _showUnavailable(context, 'Pickup'),
                     ),
                   ),
                 ],
@@ -203,7 +263,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Delivery fee: ₦2,500',
+                  deliveryFee == 0
+                      ? 'Free delivery'
+                      : 'Delivery fee: ${_naira(deliveryFee)}',
                   style: TextStyle(color: Colors.grey[600], fontSize: 14),
                 ),
                 const SizedBox(height: 24),
@@ -230,7 +292,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                               ),
                             ),
                             Text(
-                              'Victoria Fabrics Store\n15 Admiralty Way, Lekki Phase 1, Lagos',
+                              settings.pickupLocation,
                               style: TextStyle(
                                   color: Colors.grey[700], fontSize: 14),
                             ),
@@ -273,13 +335,15 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                     _SummaryRow(
                       label: 'Delivery Fee',
                       value: _deliveryType == DeliveryType.delivery
-                          ? '₦2,500'
-                          : '₦0',
+                          ? (deliveryFee == 0
+                              ? 'Free'
+                              : _naira(deliveryFee))
+                          : _naira(0),
                     ),
                     const Divider(height: 24),
                     _SummaryRow(
                       label: 'Total',
-                      value: '₦${grandTotal.toStringAsFixed(0)}',
+                      value: _naira(grandTotal),
                       isBold: true,
                     ),
                   ],
@@ -338,12 +402,14 @@ class _BankTransferCard extends StatelessWidget {
                     color: Color(0xFF1565C0), size: 22),
               ),
               const SizedBox(width: 10),
-              const Text(
-                'Bank Transfer',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                  color: Color(0xFF1565C0),
+              const Expanded(
+                child: Text(
+                  'Bank Transfer',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: Color(0xFF1565C0),
+                  ),
                 ),
               ),
             ],
@@ -396,40 +462,50 @@ class _BankDetailRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
           style: TextStyle(fontSize: 13, color: Colors.grey[600]),
         ),
-        Row(
-          children: [
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: highlight
-                    ? AppTheme.secondaryColor
-                    : const Color(0xFF1A237E),
+        const SizedBox(width: 12),
+        // The value (e.g. a long account name) must be allowed to wrap rather
+        // than overflow the row on a narrow phone.
+        Expanded(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Flexible(
+                child: Text(
+                  value,
+                  textAlign: TextAlign.right,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: highlight
+                        ? AppTheme.secondaryColor
+                        : const Color(0xFF1A237E),
+                  ),
+                ),
               ),
-            ),
-            if (copyable) ...[
-              const SizedBox(width: 6),
-              GestureDetector(
-                onTap: () {
-                  Clipboard.setData(ClipboardData(text: value));
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Account number copied!'),
-                      duration: Duration(seconds: 2),
-                    ),
-                  );
-                },
-                child: const Icon(Icons.copy, size: 16, color: Colors.grey),
-              ),
+              if (copyable) ...[
+                const SizedBox(width: 6),
+                GestureDetector(
+                  onTap: () {
+                    Clipboard.setData(ClipboardData(text: value));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Account number copied!'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  },
+                  child: const Icon(Icons.copy, size: 16, color: Colors.grey),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ],
     );
@@ -462,6 +538,7 @@ class _DeliveryTypeCard extends StatelessWidget {
   final String title;
   final String subtitle;
   final bool isSelected;
+  final bool enabled;
   final VoidCallback onTap;
 
   const _DeliveryTypeCard({
@@ -470,41 +547,48 @@ class _DeliveryTypeCard extends StatelessWidget {
     required this.subtitle,
     required this.isSelected,
     required this.onTap,
+    this.enabled = true,
   });
 
   @override
   Widget build(BuildContext context) {
+    final dimmed = !enabled;
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color:
-              isSelected ? AppTheme.primaryColor.withValues(alpha: 0.1) : Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isSelected ? AppTheme.primaryColor : Colors.grey[300]!,
-            width: isSelected ? 2 : 1,
+      child: Opacity(
+        opacity: dimmed ? 0.5 : 1,
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? AppTheme.primaryColor.withValues(alpha: 0.1)
+                : Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isSelected ? AppTheme.primaryColor : Colors.grey[300]!,
+              width: isSelected ? 2 : 1,
+            ),
           ),
-        ),
-        child: Column(
-          children: [
-            Icon(icon,
-                size: 32,
-                color: isSelected ? AppTheme.primaryColor : Colors.grey),
-            const SizedBox(height: 8),
-            Text(
-              title,
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: isSelected ? AppTheme.primaryColor : Colors.black,
+          child: Column(
+            children: [
+              Icon(icon,
+                  size: 32,
+                  color: isSelected ? AppTheme.primaryColor : Colors.grey),
+              const SizedBox(height: 8),
+              Text(
+                title,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: isSelected ? AppTheme.primaryColor : Colors.black,
+                ),
               ),
-            ),
-            Text(
-              subtitle,
-              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-            ),
-          ],
+              Text(
+                subtitle,
+                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -529,22 +613,28 @@ class _SummaryRow extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: isBold ? 18 : 16,
-              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-              color: isBold ? AppTheme.textColor : Colors.grey[700],
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: isBold ? 18 : 16,
+                fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+                color: isBold ? AppTheme.textColor : Colors.grey[700],
+              ),
             ),
           ),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: isBold ? 20 : 16,
-              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-              color: isBold ? AppTheme.secondaryColor : Colors.black,
+          const SizedBox(width: 12),
+          Flexible(
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              style: TextStyle(
+                fontSize: isBold ? 20 : 16,
+                fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+                color: isBold ? AppTheme.secondaryColor : Colors.black,
+              ),
             ),
           ),
         ],

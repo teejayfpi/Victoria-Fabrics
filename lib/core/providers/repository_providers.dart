@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/repositories/category_repository.dart';
 import '../../data/repositories/order_repository.dart';
 import '../../data/repositories/product_repository.dart';
+import '../../data/repositories/settings_repository.dart';
 import '../../data/repositories/user_repository.dart';
 import '../../services/firestore_service.dart';
 
@@ -25,4 +26,8 @@ final orderRepositoryProvider = Provider<OrderRepository>((ref) {
 
 final userRepositoryProvider = Provider<UserRepository>((ref) {
   return UserRepository(ref.watch(firestoreServiceProvider));
+});
+
+final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
+  return SettingsRepository(ref.watch(firestoreServiceProvider));
 });

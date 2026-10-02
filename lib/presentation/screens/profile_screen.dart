@@ -97,6 +97,19 @@ class ProfileScreen extends ConsumerWidget {
                     ),
                   ] else ...[
                     OutlinedButton.icon(
+                      onPressed: () => context.push('/edit-profile'),
+                      icon: const Icon(Icons.edit, color: AppTheme.primaryColor),
+                      label: const Text('Edit Profile'),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: AppTheme.primaryColor),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 10,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    OutlinedButton.icon(
                       onPressed: () async {
                         await ref
                             .read(authControllerProvider.notifier)
@@ -145,6 +158,12 @@ class ProfileScreen extends ConsumerWidget {
               title: 'Notifications',
               subtitle: 'Manage notifications',
               onTap: () => context.push('/notification-settings'),
+            ),
+            _MenuItem(
+              icon: Icons.store,
+              title: 'Store Information',
+              subtitle: 'Address, contact and delivery fee',
+              onTap: () => context.push('/store-info'),
             ),
             _MenuItem(
               icon: Icons.help,

@@ -27,6 +27,16 @@ class UserRepository {
   Future<Result<void>> setWishlist(String uid, List<String> productIds) =>
       _merge(uid, {'wishlist': productIds});
 
+  // ─── Contact details ──────────────────────────────────────────────
+
+  /// Saves the customer's editable name and phone.
+  Future<Result<void>> setContactDetails(
+    String uid, {
+    required String displayName,
+    required String phone,
+  }) =>
+      _merge(uid, {'displayName': displayName, 'phone': phone});
+
   // ─── Addresses ────────────────────────────────────────────────────
 
   /// Persists the full address list. Callers pass the list they want stored,

@@ -52,6 +52,7 @@ class AdminUser {
     required this.email,
     required this.name,
     required this.role,
+    this.phone,
     this.createdAt,
   });
 
@@ -59,6 +60,7 @@ class AdminUser {
   final String email;
   final String name;
   final AdminRole role;
+  final String? phone;
   final DateTime? createdAt;
 
   @override
@@ -186,8 +188,43 @@ class AdminAuthNotifier extends StateNotifier<AsyncValue<AdminUser?>> {
           user.displayName ??
           'Administrator',
       role: role,
+      phone: data['phone'] as String?,
       createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
     );
+  }
+
+  /// Updates the signed-in administrator's own profile fields (name, phone).
+  ///
+  /// Only these two fields are written, and the security rule for
+  /// `admins/{uid}` permits exactly this self-edit — never a role change, so
+  /// this cannot escalate privileges. The in-memory profile is refreshed so
+  /// the change is visible immediately.
+  Future<void> updateOwnProfile({required String name, String? phone}) async {
+    final current = state.valueOrNull;
+    if (current == null) {
+      throw const AuthException(
+        message: 'You must be signed in as an administrator.',
+        code: 'admin-required',
+      );
+    }
+
+    await _firestore.collection('admins').doc(current.id).update({
+      'name': name.trim(),
+      'phone': (phone ?? '').trim(),
+    });
+
+    state = AsyncValue.data(
+      AdminUser(
+        id: current.id,
+        email: current.email,
+        name: name.trim(),
+        role: current.role,
+        phone: (phone ?? '').trim(),
+        createdAt: current.createdAt,
+      ),
+    );
+    AppLogger.info('Admin profile updated', tag: 'admin_auth',
+        context: {'uid': current.id});
   }
 
   Future<void> logout() async {

@@ -50,14 +50,23 @@ class NotificationPreferences {
 
 /// The signed-in customer's saved data, stored on `users/{uid}`.
 ///
-/// A single document keeps wishlist, addresses and preferences together so
-/// they load in one snapshot and stay within the owner-scoped security rule.
+/// A single document keeps the editable contact details, wishlist, addresses
+/// and preferences together so they load in one snapshot and stay within the
+/// owner-scoped security rule.
 class UserProfile {
   const UserProfile({
+    this.displayName = '',
+    this.phone = '',
     this.wishlistIds = const [],
     this.addresses = const [],
     this.notifications = const NotificationPreferences(),
   });
+
+  /// Customer-editable contact details. Kept separate from the Google account
+  /// profile: the shop needs a name and a phone for deliveries even when the
+  /// customer signed in with Google and never set either.
+  final String displayName;
+  final String phone;
 
   final List<String> wishlistIds;
   final List<SavedAddress> addresses;
@@ -66,6 +75,8 @@ class UserProfile {
   factory UserProfile.fromMap(Map<String, dynamic>? map) {
     if (map == null) return const UserProfile();
     return UserProfile(
+      displayName: map['displayName'] as String? ?? '',
+      phone: map['phone'] as String? ?? '',
       wishlistIds: (map['wishlist'] as List<dynamic>? ?? const [])
           .whereType<String>()
           .toList(),
