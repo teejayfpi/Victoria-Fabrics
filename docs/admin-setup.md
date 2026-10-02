@@ -55,9 +55,27 @@ catalogue, so they must be deployed alongside the app:
 firebase deploy --only firestore:rules,firestore:indexes,storage
 ```
 
+**Editing the rules in the repo does not change the live project.** Until a
+deploy runs, the backend keeps the last deployed rules. This is the usual reason
+a *correct* fix still shows the old symptom.
+
+To stop that drift, `.github/workflows/deploy-rules.yml` deploys automatically on
+every push to `main` that touches a rules file — but only once you give it a
+token:
+
+1. On a machine signed in to Firebase, run `firebase login:ci`.
+2. Copy the printed token.
+3. In GitHub: **Settings → Secrets and variables → Actions → New repository
+   secret**, name it `FIREBASE_TOKEN`, paste the token.
+
+Until the secret exists the workflow skips with a warning instead of failing.
+Once it is set, every rules change on `main` is deployed within a minute, and the
+"Deploy Firebase Rules" run is your proof the backend matches the repo.
+
 `firestore-rules-tests/` holds emulator-backed regression tests for the access
 matrix (`cd firestore-rules-tests && npm install && npm test`; needs a JRE).
-They run in CI as the **Firestore Rules** job.
+They run in CI as the **Firestore Rules** job, and the deploy only runs after a
+push, so a failing test never reaches the live project via CI.
 
 > If the admin portal reports "Could not load dashboard data — you do not have
 > permission to perform this action" for an account you *have* provisioned, the
