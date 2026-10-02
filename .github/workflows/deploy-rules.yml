@@ -5,9 +5,12 @@ name: Deploy Firebase Rules
 # project keeps running the last deployed version. That drift is what made a
 # correctly-fixed roster admin keep getting `permission-denied`.
 #
-# Requires the repository secret FIREBASE_TOKEN (create it with
-# `firebase login:ci`). Until it is set the job skips with a warning rather
-# than failing, so it never blocks the pipeline — see docs/admin-setup.md.
+# Authentication, in order of preference:
+#   1. FIREBASE_SERVICE_ACCOUNT — the full JSON of a service-account key. This
+#      is what Firebase recommends; FIREBASE_TOKEN is deprecated.
+#   2. FIREBASE_TOKEN — a legacy `firebase login:ci` token.
+# With neither set the job skips with a warning instead of failing, so it never
+# blocks the pipeline. See docs/admin-setup.md for how to create either.
 
 on:
   push:
@@ -26,6 +29,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+      FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
       CI: true
     steps:
       - uses: actions/checkout@v7
@@ -45,16 +49,21 @@ jobs:
       - name: Install Firebase CLI
         run: npm install -g firebase-tools
 
-      - name: Warn when the deploy token is missing
-        if: env.FIREBASE_TOKEN == ''
+      - name: Write service-account key
+        if: env.FIREBASE_SERVICE_ACCOUNT != ''
         run: |
-          echo "::warning::FIREBASE_TOKEN is not set, so the rules were NOT deployed."
+          printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/firebase-sa.json"
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/firebase-sa.json" >> "$GITHUB_ENV"
+
+      - name: Warn when no credential is configured
+        if: env.FIREBASE_SERVICE_ACCOUNT == '' && env.FIREBASE_TOKEN == ''
+        run: |
+          echo "::warning::No FIREBASE_SERVICE_ACCOUNT or FIREBASE_TOKEN secret is set, so the rules were NOT deployed."
           echo "The live project still runs its previous rules until you deploy them."
-          echo "Create a token with 'firebase login:ci' and add it as the"
-          echo "FIREBASE_TOKEN repository secret to enable automatic deploys."
+          echo "See docs/admin-setup.md for how to create a service-account key."
 
       - name: Deploy Firestore rules and indexes
-        if: env.FIREBASE_TOKEN != ''
+        if: env.FIREBASE_SERVICE_ACCOUNT != '' || env.FIREBASE_TOKEN != ''
         run: |
           firebase deploy \
             --only firestore:rules,firestore:indexes \
@@ -64,9 +73,13 @@ jobs:
         # Storage is billing-gated, so the bucket may not exist on a free
         # project. A failure here must not stop the Firestore rules, which are
         # what the admin portal actually depends on.
-        if: env.FIREBASE_TOKEN != ''
+        if: env.FIREBASE_SERVICE_ACCOUNT != '' || env.FIREBASE_TOKEN != ''
         continue-on-error: true
         run: |
           firebase deploy \
             --only storage \
             --project victoria-fabrics
+
+      - name: Remove service-account key
+        if: always() && env.FIREBASE_SERVICE_ACCOUNT != ''
+        run: rm -f "$RUNNER_TEMP/firebase-sa.json"

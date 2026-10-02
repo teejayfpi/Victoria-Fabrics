@@ -61,16 +61,26 @@ a *correct* fix still shows the old symptom.
 
 To stop that drift, `.github/workflows/deploy-rules.yml` deploys automatically on
 every push to `main` that touches a rules file — but only once you give it a
-token:
+credential. It accepts either of these repository secrets (create them in
+GitHub under **Settings → Secrets and variables → Actions**):
 
-1. On a machine signed in to Firebase, run `firebase login:ci`.
-2. Copy the printed token.
-3. In GitHub: **Settings → Secrets and variables → Actions → New repository
-   secret**, name it `FIREBASE_TOKEN`, paste the token.
+**Preferred — a service-account key (`FIREBASE_SERVICE_ACCOUNT`).** This is what
+Firebase recommends; the legacy token below is deprecated and easy to get wrong.
 
-Until the secret exists the workflow skips with a warning instead of failing.
-Once it is set, every rules change on `main` is deployed within a minute, and the
-"Deploy Firebase Rules" run is your proof the backend matches the repo.
+1. Firebase Console → ⚙ **Project settings → Service accounts → Generate new
+   private key**. A JSON file downloads.
+2. Create a repository secret named `FIREBASE_SERVICE_ACCOUNT` and paste the
+   **entire contents of the JSON file** as the value.
+
+**Legacy — a CI token (`FIREBASE_TOKEN`).** Run `firebase login:ci` on a machine
+signed into Firebase and copy the token it prints. If a deploy fails with
+`HTTP Error: 401 ... invalid authentication credentials`, the token value is not
+a valid refresh token — switch to the service-account key.
+
+Until at least one secret exists the workflow skips with a warning instead of
+failing. Once set, every rules change on `main` is deployed within a minute, and
+the "Deploy Firebase Rules" run is your proof the backend matches the repo. You
+can also trigger it on demand from the Actions tab ("Run workflow").
 
 `firestore-rules-tests/` holds emulator-backed regression tests for the access
 matrix (`cd firestore-rules-tests && npm install && npm test`; needs a JRE).
