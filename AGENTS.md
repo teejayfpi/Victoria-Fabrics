@@ -113,3 +113,15 @@ mirrors the rules' 10-line ceiling — change both together.
 - The admin launcher icon is a flavor override under
   `android/app/src/admin/res`; regenerate with `tool/generate_icons.py`.
 - CI status checks and a PR-only branch rule are configured on `main`.
+- Rules read a custom claim with `request.auth.token.get('role', '')`, never
+  `request.auth.token.role`. Indexing a *missing* key throws in the rules
+  engine, which aborts the whole boolean before the `admins/{uid}` roster
+  fallback runs — that is what denied roster-provisioned admins everything.
+  Keep the `get(...)` form in both `firestore.rules` and `storage.rules`.
+- The rules-test harness (`firestore-rules-tests/`, `npm test`) runs the
+  Firestore and Storage suites against the emulator. `firebase-tools` 15 needs
+  JDK 21+, which is why the `Firestore Rules` CI job sets up Java 21 while the
+  APK jobs stay on 17.
+- Emulator quirk: a `get()`-derived value comparison reports "evaluation
+  error" on the false branch while still returning a correct DENY. Do not
+  chase that string in the emulator log — assert the allow/deny outcome.
