@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:go_router/go_router.dart';
 import '../providers/product_provider.dart';
 import '../providers/cart_provider.dart';
 import '../providers/user_profile_provider.dart';
@@ -382,7 +383,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                         content: Text('$_quantity $_selectedUnit of ${product.name} added to cart'),
                         action: SnackBarAction(
                           label: 'View Cart',
-                          onPressed: () => Navigator.of(context).pop(),
+                          onPressed: () => context.push('/cart'),
                         ),
                       ),
                     );

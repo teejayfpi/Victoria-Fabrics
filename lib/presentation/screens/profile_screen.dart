@@ -174,14 +174,36 @@ class ProfileScreen extends ConsumerWidget {
             ),
             _MenuItem(
               icon: Icons.admin_panel_settings,
-              title: 'Admin Portal',
-              subtitle: 'Manage your store',
-              onTap: () {
-                Navigator.pushNamed(context, '/admin');
-              },
+              title: 'Staff Sign-in',
+              subtitle: 'For store administrators',
+              onTap: () => _showStaffInfo(context),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  /// Staff use a separate build (`lib/main_admin.dart`, flavor `admin`), so
+  /// this explains where the portal lives instead of navigating to a route that
+  /// does not exist in the customer app.
+  void _showStaffInfo(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Staff sign-in'),
+        content: const Text(
+          'The store management portal is a separate app. Ask your '
+          'administrator to install the Victoria Fabrics Admin build '
+          '(application ID com.fabrichaven.fabric_haven_admin) and sign in '
+          'there with an authorised email and password.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Got it'),
+          ),
+        ],
       ),
     );
   }

@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:uuid/uuid.dart';
 import '../../domain/entities/order.dart';
 import '../../domain/entities/cart_item.dart';
 import '../../core/error/exceptions.dart';
@@ -26,7 +25,6 @@ class OrderNotifier extends StateNotifier<AsyncValue<Order?>> {
 
   OrderNotifier(this._ref) : super(const AsyncValue.data(null));
 
-  final _uuid = const Uuid();
 
   /// Creates an order. Validation happens in two places: here (fast feedback
   /// before a network round-trip) and inside the Firestore transaction, which
@@ -52,7 +50,6 @@ class OrderNotifier extends StateNotifier<AsyncValue<Order?>> {
       }
 
       final user = _ref.read(currentUserProvider);
-      final orderId = _uuid.v4().substring(0, 8).toUpperCase();
 
       // Persist through the repository — the underlying transaction re-derives
       // the total and stock server-side.
@@ -74,8 +71,13 @@ class OrderNotifier extends StateNotifier<AsyncValue<Order?>> {
         ),
       );
 
+      // Both write paths store the short display id as the first 8 characters
+      // of the document id, so derive it the same way here. Using a random id
+      // would make the confirmation screen show a reference that does not match
+      // the stored order (or the transfer description the customer is told to
+      // use).
       final order = Order(
-        id: orderId,
+        id: docId.substring(0, 8).toUpperCase(),
         userId: user?.uid,
         items: items,
         totalAmount: totalAmount,

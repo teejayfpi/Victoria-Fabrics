@@ -7,11 +7,13 @@ import '../screens/admin_dashboard_screen.dart';
 import '../screens/admin_products_screen.dart';
 import '../screens/admin_add_product_screen.dart';
 import '../screens/admin_orders_screen.dart';
+import '../screens/admin_order_detail_screen.dart';
 import '../screens/admin_categories_screen.dart';
 import '../screens/admin_analytics_screen.dart';
 import '../screens/admin_tickets_screen.dart';
 import '../screens/admin_splash_screen.dart';
 import '../../domain/entities/product.dart';
+import '../providers/admin_data_providers.dart';
 
 final _adminNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -48,8 +50,7 @@ final adminRouter = GoRouter(
           routes: [
             GoRoute(
               path: 'add',
-              builder: (context, state) =>
-                  const AdminAddProductScreen(),
+              builder: (context, state) => const AdminAddProductScreen(),
             ),
             GoRoute(
               path: 'edit/:id',
@@ -58,9 +59,8 @@ final adminRouter = GoRouter(
                 final product = state.extra as Product?;
                 return AdminAddProductScreen(
                   product: product,
-                  productId: product == null
-                      ? state.pathParameters['id']
-                      : null,
+                  productId:
+                      product == null ? state.pathParameters['id'] : null,
                 );
               },
             ),
@@ -72,68 +72,26 @@ final adminRouter = GoRouter(
           routes: [
             GoRoute(
               path: ':id',
-              builder: (context, state) => _OrderDetailScreen(
-                  orderId: state.pathParameters['id']!),
+              builder: (context, state) => AdminOrderDetailScreen(
+                orderId: state.pathParameters['id']!,
+                initialOrder: state.extra as AdminOrder?,
+              ),
             ),
           ],
         ),
         GoRoute(
           path: 'categories',
-          builder: (context, state) =>
-              const AdminCategoriesScreen(),
+          builder: (context, state) => const AdminCategoriesScreen(),
         ),
         GoRoute(
           path: 'analytics',
-          builder: (context, state) =>
-              const AdminAnalyticsScreen(),
+          builder: (context, state) => const AdminAnalyticsScreen(),
         ),
         GoRoute(
           path: 'tickets',
-          builder: (context, state) =>
-              const AdminTicketsScreen(),
+          builder: (context, state) => const AdminTicketsScreen(),
         ),
       ],
     ),
   ],
 );
-
-class _OrderDetailScreen extends StatelessWidget {
-  final String orderId;
-  const _OrderDetailScreen({required this.orderId});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('Order $orderId')),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Colors.grey[100],
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.receipt_long,
-                  size: 64, color: Colors.grey),
-            ),
-            const SizedBox(height: 24),
-            Text('Order $orderId',
-                style: const TextStyle(
-                    fontSize: 22, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            const Text('Full order detail view coming soon.',
-                style: TextStyle(color: Colors.grey)),
-            const SizedBox(height: 24),
-            OutlinedButton.icon(
-              onPressed: () => context.pop(),
-              icon: const Icon(Icons.arrow_back),
-              label: const Text('Back to Orders'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}

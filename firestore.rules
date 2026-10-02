@@ -83,6 +83,18 @@ service cloud.firestore {
         && (items.size() <= 9 || lineMatchesProduct(items[9]));
     }
 
+    // Allowed status transitions. The admin app exposes one forward step at a
+    // time; the rules enforce the same graph so a client cannot skip states or
+    // resurrect a cancelled order. `ready` and `cancelled` are terminal-ish:
+    // `ready` may only go to `delivered`, `cancelled` to nothing.
+    function statusTransitionValid(from, to) {
+      return (from == 'pending' && to in ['confirmed', 'cancelled'])
+        || (from == 'confirmed' && to in ['preparing', 'cancelled'])
+        || (from == 'preparing' && to in ['ready', 'delivered', 'cancelled'])
+        || (from == 'ready' && to in ['delivered'])
+        || (from == 'delivered' && to in ['cancelled']);
+    }
+
     // The client may not choose its own status, backdate the order, or place it
     // on behalf of another account.
     function orderShapeValid() {
@@ -137,10 +149,12 @@ service cloud.firestore {
     }
 
     // ─── Seed markers ───────────────────────────────────────────────────
-    // Idempotency guards for first-run catalogue seeding. Write-once.
+    // Idempotency guards for first-run catalogue seeding. Write-once, and only
+    // by staff: the marker must not be claimable by an anonymous client, or a
+    // stranger could poison it and permanently block the real seed.
     match /_meta/{docId} {
       allow read: if true;
-      allow create: if true;
+      allow create: if isStaff();
       allow update, delete: if false;
     }
 
@@ -171,7 +185,18 @@ service cloud.firestore {
         && orderShapeValid()
         && orderLinesValid(request.resource.data.items);
 
-      allow update, delete: if false;
+      // Staff may advance the status (the admin app's Confirm / Start
+      // Preparing / Mark Delivered buttons) and nothing else: every other
+      // field must be unchanged, and the transition must move forward one
+      // step. Cancelling is allowed from any non-terminal state. Nobody may
+      // rewrite prices, items or totals, and nobody may delete an order.
+      allow update: if isStaff()
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['status'])
+        && statusTransitionValid(resource.data.status,
+             request.resource.data.status);
+
+      allow delete: if false;
     }
 
     // ─── Support tickets ────────────────────────────────────────────────

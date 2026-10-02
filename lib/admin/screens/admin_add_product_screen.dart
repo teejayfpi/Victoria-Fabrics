@@ -11,6 +11,7 @@ import '../../core/logging/app_logger.dart';
 import '../../core/providers/repository_providers.dart';
 import '../../core/theme/app_theme.dart';
 import '../../domain/entities/product.dart';
+import '../../domain/entities/category.dart';
 import '../../presentation/providers/category_provider.dart';
 import '../../services/storage_service.dart';
 import '../providers/admin_auth_provider.dart';
@@ -260,11 +261,85 @@ class _AdminAddProductScreenState extends ConsumerState<AdminAddProductScreen> {
     }
   }
 
+  // ─── Category picker ─────────────────────────────────────────────
+
+  /// The category picker, with explicit loading and empty states.
+  ///
+  /// Previously this was a bare dropdown over a possibly-empty list: before the
+  /// catalogue seed ran (which requires a staff session) it rendered a field
+  /// with no items that simply did not respond to taps. Surfacing the states
+  /// makes the cause obvious and gives staff a way out.
+  Widget _buildCategoryField(
+    AsyncValue<List<Category>> categoriesAsync,
+    List<Category> categories,
+  ) {
+    if (categoriesAsync.isLoading && categories.isEmpty) {
+      return const InputDecorator(
+        decoration: InputDecoration(labelText: 'Category *'),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            SizedBox(width: 12),
+            Text('Loading categories…'),
+          ],
+        ),
+      );
+    }
+
+    if (categories.isEmpty) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const InputDecorator(
+            decoration: InputDecoration(labelText: 'Category *'),
+            child: Text('No categories available',
+                style: TextStyle(color: Colors.grey)),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Add a category before creating a product.',
+                  style: TextStyle(color: Colors.grey, fontSize: 12),
+                ),
+              ),
+              TextButton.icon(
+                onPressed: () => context.push('/admin/categories'),
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text('Manage'),
+              ),
+            ],
+          ),
+        ],
+      );
+    }
+
+    return DropdownButtonFormField<String>(
+      initialValue: _selectedCategory,
+      isExpanded: true,
+      decoration: const InputDecoration(labelText: 'Category *'),
+      items: categories
+          .map((cat) => DropdownMenuItem(
+                value: cat.id,
+                child: Text(cat.name, overflow: TextOverflow.ellipsis),
+              ))
+          .toList(),
+      onChanged: (v) => setState(() => _selectedCategory = v),
+      validator: (v) => v == null ? 'Select a category' : null,
+    );
+  }
+
   // ─── Build ───────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
-    final categories = ref.watch(categoriesProvider);
+    final categoriesAsync = ref.watch(categoriesStreamProvider);
+    final categories = categoriesAsync.valueOrNull ?? const <Category>[];
     return Scaffold(
       appBar: AppBar(
         title: Text(isEditing ? 'Edit Product' : 'Add Product'),
@@ -310,18 +385,7 @@ class _AdminAddProductScreenState extends ConsumerState<AdminAddProductScreen> {
               const SizedBox(height: 16),
 
               // ── Category ──
-              DropdownButtonFormField<String>(
-                initialValue: _selectedCategory,
-                decoration: const InputDecoration(labelText: 'Category *'),
-                items: categories
-                    .map((cat) => DropdownMenuItem(
-                          value: cat.id,
-                          child: Text(cat.name),
-                        ))
-                    .toList(),
-                onChanged: (v) => setState(() => _selectedCategory = v),
-                validator: (v) => v == null ? 'Select a category' : null,
-              ),
+              _buildCategoryField(categoriesAsync, categories),
               const SizedBox(height: 16),
 
               // ── Description ──

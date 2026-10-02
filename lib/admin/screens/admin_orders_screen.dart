@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/error/error_mapper.dart';
@@ -195,8 +196,7 @@ class _OrderCardState extends ConsumerState<_OrderCard> {
         onError: (failure) => throw Exception(failure.message),
       );
       AppLogger.info('Order status updated',
-          tag: 'admin_orders',
-          context: {'status': newStatus.name});
+          tag: 'admin_orders', context: {'status': newStatus.name});
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Order marked ${newStatus.displayName}')),
@@ -227,123 +227,131 @@ class _OrderCardState extends ConsumerState<_OrderCard> {
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(order.reference,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 16)),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    order.status.displayName.toUpperCase(),
-                    style: TextStyle(
-                      color: color,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 11,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                const Icon(Icons.person, size: 16, color: Colors.grey),
-                const SizedBox(width: 4),
-                Expanded(
-                  child: Text(order.customerName,
-                      style: const TextStyle(fontSize: 14),
-                      overflow: TextOverflow.ellipsis),
-                ),
-                const SizedBox(width: 16),
-                const Icon(Icons.phone, size: 16, color: Colors.grey),
-                const SizedBox(width: 4),
-                Text(order.customerPhone,
-                    style: TextStyle(color: Colors.grey[600], fontSize: 14)),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                const Icon(Icons.shopping_bag, size: 16, color: Colors.grey),
-                const SizedBox(width: 4),
-                Text('${order.items.length} items'),
-                const SizedBox(width: 16),
-                const Icon(Icons.local_shipping, size: 16, color: Colors.grey),
-                const SizedBox(width: 4),
-                Text(order.deliveryTypeDisplayName),
-              ],
-            ),
-            if (order.deliveryAddress != null &&
-                order.deliveryAddress!.isNotEmpty) ...[
-              const SizedBox(height: 8),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => context.push(
+          '/admin/orders/${widget.adminOrder.firestoreId}',
+          extra: widget.adminOrder,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
               Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Icon(Icons.location_on, size: 16, color: Colors.grey),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(order.deliveryAddress!,
-                        style:
-                            TextStyle(color: Colors.grey[600], fontSize: 13)),
+                  Text(order.reference,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 16)),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      order.status.displayName.toUpperCase(),
+                      style: TextStyle(
+                        color: color,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 11,
+                      ),
+                    ),
                   ),
                 ],
               ),
-            ],
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                const Icon(Icons.access_time, size: 16, color: Colors.grey),
-                const SizedBox(width: 4),
-                Text(dateFormat.format(order.createdAt),
-                    style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  const Icon(Icons.person, size: 16, color: Colors.grey),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(order.customerName,
+                        style: const TextStyle(fontSize: 14),
+                        overflow: TextOverflow.ellipsis),
+                  ),
+                  const SizedBox(width: 16),
+                  const Icon(Icons.phone, size: 16, color: Colors.grey),
+                  const SizedBox(width: 4),
+                  Text(order.customerPhone,
+                      style: TextStyle(color: Colors.grey[600], fontSize: 14)),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  const Icon(Icons.shopping_bag, size: 16, color: Colors.grey),
+                  const SizedBox(width: 4),
+                  Text('${order.items.length} items'),
+                  const SizedBox(width: 16),
+                  const Icon(Icons.local_shipping,
+                      size: 16, color: Colors.grey),
+                  const SizedBox(width: 4),
+                  Text(order.deliveryTypeDisplayName),
+                ],
+              ),
+              if (order.deliveryAddress != null &&
+                  order.deliveryAddress!.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.location_on, size: 16, color: Colors.grey),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(order.deliveryAddress!,
+                          style:
+                              TextStyle(color: Colors.grey[600], fontSize: 13)),
+                    ),
+                  ],
+                ),
               ],
-            ),
-            const Divider(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('Total', style: TextStyle(color: Colors.grey)),
-                Text(
-                  '₦${order.totalAmount.toStringAsFixed(0)}',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                    color: AppTheme.secondaryColor,
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  const Icon(Icons.access_time, size: 16, color: Colors.grey),
+                  const SizedBox(width: 4),
+                  Text(dateFormat.format(order.createdAt),
+                      style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+                ],
+              ),
+              const Divider(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Total', style: TextStyle(color: Colors.grey)),
+                  Text(
+                    '₦${order.totalAmount.toStringAsFixed(0)}',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                      color: AppTheme.secondaryColor,
+                    ),
+                  ),
+                ],
+              ),
+              if (action != null) ...[
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _updating ? null : () => _advance(action.$2),
+                    style: ElevatedButton.styleFrom(backgroundColor: action.$3),
+                    child: _updating
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white),
+                          )
+                        : Text(action.$1),
                   ),
                 ),
               ],
-            ),
-            if (action != null) ...[
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _updating ? null : () => _advance(action.$2),
-                  style: ElevatedButton.styleFrom(backgroundColor: action.$3),
-                  child: _updating
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2, color: Colors.white),
-                        )
-                      : Text(action.$1),
-                ),
-              ),
             ],
-          ],
+          ),
         ),
       ),
     );

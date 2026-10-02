@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/relative_time.dart';
 import '../../domain/entities/order.dart';
+import '../../domain/entities/ticket.dart';
 import '../providers/admin_auth_provider.dart';
 import '../providers/admin_data_providers.dart';
+import '../providers/admin_notifications_provider.dart';
 
 /// Formats a naira amount compactly for the stat tiles, e.g. `₦1.2M`.
 String _compactCurrency(double amount) {
@@ -32,7 +35,7 @@ class AdminDashboardScreen extends ConsumerWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.notifications_outlined),
-            onPressed: () => _showNotifications(context),
+            onPressed: () => _showNotifications(context, ref),
           ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.account_circle),
@@ -220,42 +223,79 @@ class AdminDashboardScreen extends ConsumerWidget {
     );
   }
 
-  void _showNotifications(BuildContext context) {
+  void _showNotifications(BuildContext context, WidgetRef ref) {
+    final orders =
+        ref.read(adminOrdersProvider).valueOrNull ?? const <AdminOrder>[];
+    final tickets =
+        ref.read(adminTicketsProvider).valueOrNull ?? const <SupportTicket>[];
+    final notifications = buildAdminNotifications(
+      orders: orders,
+      tickets: tickets,
+    );
+
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
-          borderRadius:
-              BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (ctx) => Container(
-        padding: const EdgeInsets.all(16),
-        child: const Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Notifications',
-                style: TextStyle(
-                    fontSize: 18, fontWeight: FontWeight.bold)),
-            SizedBox(height: 16),
-            ListTile(
-              leading: CircleAvatar(
-                backgroundColor: Colors.orange,
-                child: Icon(Icons.notifications,
-                    color: Colors.white, size: 20),
-              ),
-              title: Text('New Order received'),
-              subtitle: Text('2 minutes ago'),
-            ),
-            ListTile(
-              leading: CircleAvatar(
-                backgroundColor: Colors.purple,
-                child: Icon(Icons.confirmation_number,
-                    color: Colors.white, size: 20),
-              ),
-              title: Text('New support ticket'),
-              subtitle: Text('15 minutes ago'),
-            ),
-            SizedBox(height: 16),
-          ],
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Notifications',
+                  style: TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              if (notifications.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 32),
+                  child: Center(
+                    child: Text('Nothing new right now',
+                        style: TextStyle(color: Colors.grey)),
+                  ),
+                )
+              else
+                Flexible(
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: notifications.length,
+                    itemBuilder: (ctx, i) {
+                      final n = notifications[i];
+                      final isOrder =
+                          n.kind == AdminNotificationKind.order;
+                      return ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor:
+                              isOrder ? Colors.orange : Colors.purple,
+                          child: Icon(
+                            isOrder
+                                ? Icons.receipt_long
+                                : Icons.confirmation_number,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                        ),
+                        title: Text(n.title,
+                            maxLines: 1, overflow: TextOverflow.ellipsis),
+                        subtitle: Text(
+                          '${n.subtitle} · '
+                          '${formatRelativeTime(n.createdAt)}',
+                        ),
+                        onTap: n.route == null
+                            ? null
+                            : () {
+                                Navigator.pop(ctx);
+                                context.push(n.route!);
+                              },
+                      );
+                    },
+                  ),
+                ),
+              const SizedBox(height: 8),
+            ],
+          ),
         ),
       ),
     );

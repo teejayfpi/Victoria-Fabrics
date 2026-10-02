@@ -7,8 +7,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/config/app_config.dart';
 import 'core/constants/app_constants.dart';
 import 'core/logging/app_logger.dart';
-import 'core/providers/bootstrap_provider.dart';
+import 'core/providers/catalogue_seeder.dart';
 import 'core/theme/app_theme.dart';
+import 'admin/providers/admin_auth_provider.dart';
 import 'admin/router/admin_router.dart';
 import 'services/notification_service.dart';
 
@@ -56,7 +57,12 @@ class VictoriaFabricsAdminApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    ref.listen(catalogueBootstrapProvider, (_, __) {});
+    // The catalogue seed requires a staff session (see catalogue_seeder.dart),
+    // so run it when an administrator first appears rather than at launch.
+    ref.listen(currentAdminProvider, (previous, next) {
+      if (next != null) ref.invalidate(catalogueSeederProvider);
+    });
+    ref.listen(catalogueSeederProvider, (_, __) {});
     return MaterialApp.router(
       title: '${AppConstants.appName} Admin',
       theme: AppTheme.lightTheme,
