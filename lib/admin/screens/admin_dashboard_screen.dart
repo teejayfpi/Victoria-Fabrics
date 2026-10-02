@@ -28,8 +28,7 @@ class AdminDashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final adminState = ref.watch(adminAuthProvider);
-    final admin = adminState.valueOrNull;
+    final admin = ref.watch(currentAdminProvider);
     final stats = ref.watch(adminStatsProvider);
     // Distinguish "the store has no data" from "the read failed". Without this
     // the tiles and the recent-orders list silently show zeros and an empty

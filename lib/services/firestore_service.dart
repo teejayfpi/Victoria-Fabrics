@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart' hide Order;
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 
 import '../core/config/app_config.dart';
 import '../core/logging/app_logger.dart';
@@ -19,9 +20,18 @@ import '../data/datasources/mock_data_source.dart';
 /// `lib/data/repositories/` — they add error mapping and validation.
 class FirestoreService {
   FirestoreService._();
+
+  /// Test seam: allows a subclass to override individual Firestore-backed
+  /// methods without touching a live project. Production always uses the
+  /// singleton above.
+  @visibleForTesting
+  FirestoreService.forTest();
+
   static final FirestoreService instance = FirestoreService._();
 
-  final _db = FirebaseFirestore.instance;
+  // Resolved lazily so the test seam above can construct the service without a
+  // live Firebase app; production still reaches the singleton instance.
+  FirebaseFirestore get _db => FirebaseFirestore.instance;
 
   CollectionReference<Map<String, dynamic>> get _products =>
       _db.collection(AppConfig.productsCollection);

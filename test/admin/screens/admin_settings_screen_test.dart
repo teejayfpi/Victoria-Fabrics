@@ -5,9 +5,26 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:fabric_haven/admin/providers/admin_auth_provider.dart';
 import 'package:fabric_haven/admin/screens/admin_profile_screen.dart';
 import 'package:fabric_haven/admin/screens/admin_settings_screen.dart';
+import 'package:fabric_haven/core/providers/repository_providers.dart';
 import 'package:fabric_haven/core/theme/app_theme.dart';
+import 'package:fabric_haven/data/repositories/settings_repository.dart';
 import 'package:fabric_haven/domain/entities/store_settings.dart';
 import 'package:fabric_haven/presentation/providers/settings_provider.dart';
+import 'package:fabric_haven/services/firestore_service.dart';
+
+/// Records the settings document instead of writing to Firestore, so the
+/// "set my own delivery fee / address" flow can be asserted without a backend.
+class _SettingsRecordingFirestore extends FirestoreService {
+  _SettingsRecordingFirestore() : super.forTest();
+
+  StoreSettings? saved;
+
+  @override
+  Future<void> saveStoreSettings(StoreSettings settings) async {
+    saved = settings;
+  }
+}
+
 
 /// Builds the settings form from a fixed [StoreSettings] value, bypassing
 /// Firestore, so the field defaults and the both-methods-disabled guard can be
@@ -81,6 +98,47 @@ void main() {
     await tester.pump();
 
     expect(find.text('Enter a number'), findsOneWidget);
+  });
+
+  testWidgets('saving persists the delivery fee and shop address',
+      (tester) async {
+    useTallSurface(tester);
+    final firestore = _SettingsRecordingFirestore();
+
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        storeSettingsStreamProvider
+            .overrideWith((ref) => Stream.value(const StoreSettings())),
+        currentAdminProvider.overrideWithValue(const AdminUser(
+          id: 'a1',
+          email: 'owner@example.com',
+          name: 'Ada Obi',
+          role: AdminRole.admin,
+        )),
+        firestoreServiceProvider.overrideWithValue(firestore),
+        settingsRepositoryProvider
+            .overrideWith((ref) => SettingsRepository(firestore)),
+      ],
+      child: MaterialApp(
+        theme: AppTheme.lightTheme,
+        home: const AdminSettingsScreen(),
+      ),
+    ));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    await tester.enterText(
+        find.widgetWithText(TextFormField, 'Street address'),
+        '12 Broad Street');
+    await tester.enterText(
+        find.widgetWithText(TextFormField, 'Delivery fee (₦)'), '3500');
+    await tester.tap(find.text('Save settings'));
+    await tester.pumpAndSettle();
+
+    expect(firestore.saved, isNotNull);
+    expect(firestore.saved!.deliveryFee, 3500);
+    expect(firestore.saved!.addressLine, '12 Broad Street');
+    expect(find.text('Store settings saved'), findsOneWidget);
   });
 
   testWidgets('admin profile screen renders the signed-in administrator',

@@ -346,7 +346,12 @@ class _AdminAddProductScreenState extends ConsumerState<AdminAddProductScreen> {
         title: Text(isEditing ? 'Edit Product' : 'Add Product'),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.fromLTRB(
+          16,
+          16,
+          16,
+          16 + MediaQuery.of(context).viewInsets.bottom,
+        ),
         child: Form(
           key: _formKey,
           child: Column(

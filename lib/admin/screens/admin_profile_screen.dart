@@ -79,7 +79,12 @@ class _AdminProfileScreenState extends ConsumerState<AdminProfileScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('My Profile')),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.fromLTRB(
+          16,
+          16,
+          16,
+          16 + MediaQuery.of(context).viewInsets.bottom,
+        ),
         child: Form(
           key: _formKey,
           child: Column(

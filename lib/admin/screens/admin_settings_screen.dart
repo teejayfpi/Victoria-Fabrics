@@ -158,7 +158,12 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
     return Form(
       key: _formKey,
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+        padding: EdgeInsets.fromLTRB(
+          16,
+          16,
+          16,
+          96 + MediaQuery.of(context).viewInsets.bottom,
+        ),
         children: [
           _Section(
             title: 'Store',

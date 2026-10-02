@@ -173,8 +173,16 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Checkout')),
+      // Keep the focused field and the Place Order button above the soft
+      // keyboard. Without this the address/phone fields sit under the keyboard
+      // on a short screen and look like they cannot be typed into.
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.fromLTRB(
+          16,
+          16,
+          16,
+          16 + MediaQuery.of(context).viewInsets.bottom,
+        ),
         child: Form(
           key: _formKey,
           child: Column(
