@@ -46,6 +46,23 @@ The router guard (`isAdminLoggedInProvider`) requires `canManage`, i.e. `staff`
 or above. A `viewer` authenticates successfully but is bounced back to the
 login screen, so grant `staff` or higher to anyone who needs the portal.
 
+## Deploying the security rules
+
+The rules are the source of truth for who can read orders/tickets and manage the
+catalogue, so they must be deployed alongside the app:
+
+```bash
+firebase deploy --only firestore:rules,firestore:indexes,storage
+```
+
+`firestore-rules-tests/` holds emulator-backed regression tests for the access
+matrix (`cd firestore-rules-tests && npm install && npm test`; needs a JRE).
+They run in CI as the **Firestore Rules** job.
+
+> If the admin portal reports "Could not load dashboard data — you do not have
+> permission to perform this action" for an account you *have* provisioned, the
+> deployed rules are stale. Re-deploy them with the command above.
+
 ## Creating the first administrator (free, Spark plan)
 
 The console writes with the Admin SDK, so the deny-by-default rules do not

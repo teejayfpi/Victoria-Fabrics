@@ -17,8 +17,23 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function adminRole() {
-      return request.auth.token.role;
+    // The caller's `role` custom claim, or '' when the token carries no such
+    // claim.
+    //
+    // Read via `token.get(...)` rather than `request.auth.token.role`: indexing
+    // a *missing* key off the token throws in the rules engine ("Property role
+    // is undefined on object"). That aborts the whole boolean before the
+    // `admins/{uid}` roster fallback below is ever evaluated, so an admin
+    // provisioned through the roster document was denied every order/ticket
+    // read and every catalogue write. `get` returns the default instead.
+    function tokenRole() {
+      return isSignedIn() ? request.auth.token.get('role', '') : '';
+    }
+
+    // Whether the token carries a `role` claim at all. A claim is authoritative
+    // when present; when absent we defer to the roster document.
+    function hasRoleClaim() {
+      return isSignedIn() && request.auth.token.keys().hasAny(['role']);
     }
 
     // Role document lookup; used as a fallback when no custom claim is set.
@@ -27,27 +42,32 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
 
-    // The `role` field of the caller's roster document, or null when there is
-    // no document. Reading the *value* (not just the document's existence)
-    // matters: a `viewer` roster entry must not be treated as staff, or a
-    // read-only account could edit the catalogue.
+    // The `role` field of the caller's roster document, or '' when there is no
+    // document (or the document has no `role` field). Reading the *value* (not
+    // just the document's existence) matters: a `viewer` roster entry must not
+    // be treated as staff, or a read-only account could edit the catalogue.
+    //
+    // `data.get('role', '')` rather than `data.role`: the latter throws on a
+    // document that lacks the field, and both the '' default and `get` keep the
+    // expression error-free so a denial is a plain "false" rather than a rules
+    // evaluation error.
     function adminDocRole() {
       return hasAdminDoc()
-        ? get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role
-        : null;
+        ? get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.get('role', '')
+        : '';
     }
 
     function isAdmin() {
       return isSignedIn()
-        && (adminRole() in ['admin', 'superAdmin', 'super_admin']
-            || (adminRole() == null
+        && (tokenRole() in ['admin', 'superAdmin', 'super_admin']
+            || (!hasRoleClaim()
                 && adminDocRole() in ['admin', 'superAdmin', 'super_admin']));
     }
 
     function isStaff() {
       return isSignedIn()
-        && (adminRole() in ['staff', 'admin', 'superAdmin', 'super_admin']
-            || (adminRole() == null
+        && (tokenRole() in ['staff', 'admin', 'superAdmin', 'super_admin']
+            || (!hasRoleClaim()
                 && adminDocRole() in ['staff', 'admin', 'superAdmin', 'super_admin']));
     }
 

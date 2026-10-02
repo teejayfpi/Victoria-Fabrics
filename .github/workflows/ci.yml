@@ -70,10 +70,34 @@ jobs:
         working-directory: functions
         run: npm run lint
 
+  firestore-rules:
+    name: Firestore Rules
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup Java
+        # The Firestore emulator is a JVM process.
+        uses: actions/setup-java@v6
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Install rules-test dependencies
+        working-directory: firestore-rules-tests
+        run: npm install
+
+      - name: Run rules tests
+        # Guards the access matrix in firestore.rules — notably that an admin
+        # provisioned only through admins/{uid} (no custom claim) can read
+        # orders/tickets and manage the catalogue.
+        working-directory: firestore-rules-tests
+        run: npm test
+
   build-android:
     name: Build ${{ matrix.app }} APK
     runs-on: ubuntu-latest
-    needs: [lint, test]
+    needs: [lint, test, firestore-rules]
     strategy:
       fail-fast: false
       matrix:
