@@ -77,15 +77,15 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Setup Java
-        # The Firestore emulator is a JVM process.
+        # The Firestore emulator is a JVM process; firebase-tools 15 requires 21+.
         uses: actions/setup-java@v6
         with:
-          java-version: '17'
+          java-version: '21'
           distribution: 'temurin'
 
       - name: Install rules-test dependencies
         working-directory: firestore-rules-tests
-        run: npm install
+        run: npm ci
 
       - name: Run rules tests
         # Guards the access matrix in firestore.rules — notably that an admin
