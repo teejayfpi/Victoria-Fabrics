@@ -114,6 +114,10 @@ mirrors the rules' 10-line ceiling — change both together.
 - Widget tests use `ProviderScope` overrides, and layout tests pump at
   320/390/1024 pt widths and assert `tester.takeException()` is null, which
   catches RenderFlex overflows.
+- `FirestoreService.forTest()` is a `@visibleForTesting` constructor. Subclass
+  it in a test to record a single write (e.g. `deleteProduct`,
+  `saveStoreSettings`) instead of reaching a live project; `_db` is resolved
+  lazily so constructing the fake needs no Firebase app.
 - `android/app/google-services.json` is tracked (Firebase config, not a
   secret). Signing keys, `key.properties` and service-account JSON are
   gitignored — keep it that way.
