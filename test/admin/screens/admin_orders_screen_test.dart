@@ -33,7 +33,8 @@ const _product = Product(
   availableUnits: ['Yard', 'Meter', 'Piece'],
 );
 
-AdminOrder _order(String id, OrderStatus status) => AdminOrder(
+AdminOrder _order(String id, OrderStatus status, {String name = 'Ada Obi'}) =>
+    AdminOrder(
       firestoreId: id,
       order: Order(
         id: id,
@@ -50,7 +51,7 @@ AdminOrder _order(String id, OrderStatus status) => AdminOrder(
         status: status,
         deliveryType: DeliveryType.delivery,
         deliveryAddress: '12 Broad Street, Lagos',
-        customerName: 'Ada Obi',
+        customerName: name,
         customerPhone: '08030000000',
         createdAt: DateTime(2026, 1, 1, 9, 30),
       ),
@@ -112,5 +113,45 @@ void main() {
     await tester.pump(const Duration(milliseconds: 50));
 
     expect(find.text('No orders found'), findsOneWidget);
+  });
+
+  testWidgets('search narrows orders by customer name', (tester) async {
+    await tester.pumpWidget(_host([
+      adminOrdersProvider.overrideWith(
+        (ref) => Stream.value([
+          _order('o1', OrderStatus.pending, name: 'Ada Obi'),
+          _order('o2', OrderStatus.pending, name: 'Bola Ade'),
+        ]),
+      ),
+    ]));
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    expect(find.text('Ada Obi'), findsOneWidget);
+    expect(find.text('Bola Ade'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextField).first, 'bola');
+    await tester.pump();
+
+    expect(find.text('Ada Obi'), findsNothing);
+    expect(find.text('Bola Ade'), findsOneWidget);
+  });
+
+  testWidgets('search with no hits shows the matching empty state',
+      (tester) async {
+    await tester.pumpWidget(_host([
+      adminOrdersProvider.overrideWith(
+        (ref) => Stream.value([_order('o1', OrderStatus.pending)]),
+      ),
+    ]));
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    await tester.enterText(find.byType(TextField).first, 'zzzz');
+    await tester.pump();
+
+    expect(find.text('No matching orders'), findsOneWidget);
   });
 }

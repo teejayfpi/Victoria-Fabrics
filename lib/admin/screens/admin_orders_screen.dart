@@ -23,6 +23,11 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
 
+  /// Shared across tabs so a search for "Ada" or "VF-AB" narrows every status
+  /// tab at once rather than only the visible one.
+  final _searchController = TextEditingController();
+  String _query = '';
+
   static const _tabs = <(String, OrderStatus?)>[
     ('All', null),
     ('Pending', OrderStatus.pending),
@@ -40,6 +45,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
   @override
   void dispose() {
     _tabController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -48,16 +54,52 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
     return Scaffold(
       appBar: AppBar(
         title: const Text('Orders'),
-        bottom: TabBar(
-          controller: _tabController,
-          isScrollable: true,
-          tabs: [for (final (label, _) in _tabs) Tab(text: label)],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(104),
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                child: TextField(
+                  controller: _searchController,
+                  textInputAction: TextInputAction.search,
+                  decoration: InputDecoration(
+                    hintText: 'Search by name, phone or order number',
+                    prefixIcon: const Icon(Icons.search),
+                    isDense: true,
+                    filled: true,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide.none,
+                    ),
+                    suffixIcon: _query.isEmpty
+                        ? null
+                        : IconButton(
+                            icon: const Icon(Icons.clear),
+                            tooltip: 'Clear search',
+                            onPressed: () {
+                              _searchController.clear();
+                              setState(() => _query = '');
+                            },
+                          ),
+                  ),
+                  onChanged: (value) => setState(() => _query = value.trim()),
+                ),
+              ),
+              TabBar(
+                controller: _tabController,
+                isScrollable: true,
+                tabs: [for (final (label, _) in _tabs) Tab(text: label)],
+              ),
+            ],
+          ),
         ),
       ),
       body: TabBarView(
         controller: _tabController,
         children: [
-          for (final (_, status) in _tabs) _OrdersList(filterStatus: status),
+          for (final (_, status) in _tabs)
+            _OrdersList(filterStatus: status, query: _query),
         ],
       ),
     );
@@ -65,9 +107,10 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
 }
 
 class _OrdersList extends ConsumerWidget {
-  const _OrdersList({this.filterStatus});
+  const _OrdersList({this.filterStatus, this.query = ''});
 
   final OrderStatus? filterStatus;
+  final String query;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -80,19 +123,30 @@ class _OrdersList extends ConsumerWidget {
         onRetry: () => ref.invalidate(adminOrdersProvider),
       ),
       data: (orders) {
-        final filtered = filterStatus == null
+        var filtered = filterStatus == null
             ? orders
             : orders.where((o) => o.order.status == filterStatus).toList();
 
+        if (query.isNotEmpty) {
+          final q = query.toLowerCase();
+          filtered = filtered.where((o) {
+            final order = o.order;
+            return order.reference.toLowerCase().contains(q) ||
+                order.customerName.toLowerCase().contains(q) ||
+                order.customerPhone.contains(q);
+          }).toList();
+        }
+
         if (filtered.isEmpty) {
-          return const Center(
+          return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.receipt_long, size: 80, color: Colors.grey),
-                SizedBox(height: 16),
-                Text('No orders found',
-                    style: TextStyle(color: Colors.grey, fontSize: 16)),
+                Icon(query.isEmpty ? Icons.receipt_long : Icons.search_off,
+                    size: 80, color: Colors.grey),
+                const SizedBox(height: 16),
+                Text(query.isEmpty ? 'No orders found' : 'No matching orders',
+                    style: const TextStyle(color: Colors.grey, fontSize: 16)),
               ],
             ),
           );
