@@ -132,33 +132,19 @@ class ProfileScreen extends ConsumerWidget {
               icon: Icons.location_on,
               title: 'Delivery Addresses',
               subtitle: 'Manage your addresses',
-              onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                      content: Text('Coming soon — delivery addresses')),
-                );
-              },
+              onTap: () => context.push('/addresses'),
             ),
             _MenuItem(
               icon: Icons.favorite,
               title: 'Wishlist',
               subtitle: 'Your saved items',
-              onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Coming soon — wishlist')),
-                );
-              },
+              onTap: () => context.push('/wishlist'),
             ),
             _MenuItem(
               icon: Icons.notifications,
               title: 'Notifications',
               subtitle: 'Manage notifications',
-              onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                      content: Text('Coming soon — notifications')),
-                );
-              },
+              onTap: () => context.push('/notification-settings'),
             ),
             _MenuItem(
               icon: Icons.help,

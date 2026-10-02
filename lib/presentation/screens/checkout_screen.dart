@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/cart_provider.dart';
 import '../providers/order_provider.dart';
+import '../providers/user_profile_provider.dart';
 import '../../domain/entities/order.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/providers/auth_provider.dart';
@@ -33,13 +34,27 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     super.dispose();
   }
 
-  /// Pre-fill name from Google account (runs once when widget is ready)
+  /// Pre-fill the form from the Google account and the customer's default saved
+  /// address (runs once, when the widget is ready).
   void _prefillFromAuth() {
     if (_prefilled) return;
     final user = ref.read(currentUserProvider);
     if (user != null) {
       if (user.displayName != null && _nameController.text.isEmpty) {
         _nameController.text = user.displayName!;
+      }
+    }
+
+    final address = ref.read(userDataControllerProvider).defaultAddress();
+    if (address != null) {
+      if (_addressController.text.isEmpty) {
+        _addressController.text = address.formatted;
+      }
+      if (_nameController.text.isEmpty && address.recipientName.isNotEmpty) {
+        _nameController.text = address.recipientName;
+      }
+      if (_phoneController.text.isEmpty && address.phone.isNotEmpty) {
+        _phoneController.text = address.phone;
       }
     }
     _prefilled = true;

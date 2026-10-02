@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../providers/product_provider.dart';
 import '../providers/cart_provider.dart';
+import '../providers/user_profile_provider.dart';
 import '../../core/theme/app_theme.dart';
 
 class ProductDetailScreen extends ConsumerStatefulWidget {
@@ -51,12 +52,38 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
       }
     }
 
+    final wishlisted = ref.watch(isWishlistedProvider(product.id));
+
     return Scaffold(
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
             expandedHeight: 350,
             pinned: true,
+            actions: [
+              IconButton(
+                tooltip: 'Save to wishlist',
+                icon: Icon(
+                  wishlisted ? Icons.favorite : Icons.favorite_border,
+                  color: wishlisted ? Colors.red : Colors.white,
+                ),
+                onPressed: () async {
+                  final nowSaved = await ref
+                      .read(userDataControllerProvider)
+                      .toggleWishlist(product.id);
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(nowSaved
+                            ? 'Saved to wishlist'
+                            : 'Removed from wishlist'),
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  }
+                },
+              ),
+            ],
             flexibleSpace: FlexibleSpaceBar(
               background: PageView.builder(
                 itemCount: product.imageUrls.length,

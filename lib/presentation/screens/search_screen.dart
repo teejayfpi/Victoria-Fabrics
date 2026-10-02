@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/product_provider.dart';
+import '../providers/user_profile_provider.dart';
 import '../widgets/product_card.dart';
 
 class SearchScreen extends ConsumerStatefulWidget {
@@ -124,6 +125,10 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                       return ProductCard(
                         product: product,
                         onTap: () => context.push('/product/${product.id}'),
+                        isWishlisted: ref.watch(isWishlistedProvider(product.id)),
+                        onToggleWishlist: () => ref
+                            .read(userDataControllerProvider)
+                            .toggleWishlist(product.id),
                       );
                     },
                   ),

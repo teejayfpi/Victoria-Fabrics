@@ -11,6 +11,9 @@ import '../screens/order_confirmation_screen.dart';
 import '../screens/orders_screen.dart';
 import '../screens/profile_screen.dart';
 import '../screens/search_screen.dart';
+import '../screens/wishlist_screen.dart';
+import '../screens/addresses_screen.dart';
+import '../screens/notification_settings_screen.dart';
 import '../screens/sign_in_screen.dart';
 import '../screens/register_screen.dart';
 import '../screens/support_ticket_screen.dart';
@@ -128,6 +131,18 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/orders',
       builder: (context, state) => const OrdersScreen(),
+    ),
+    GoRoute(
+      path: '/wishlist',
+      builder: (context, state) => const WishlistScreen(),
+    ),
+    GoRoute(
+      path: '/addresses',
+      builder: (context, state) => const AddressesScreen(),
+    ),
+    GoRoute(
+      path: '/notification-settings',
+      builder: (context, state) => const NotificationSettingsScreen(),
     ),
   ],
 );

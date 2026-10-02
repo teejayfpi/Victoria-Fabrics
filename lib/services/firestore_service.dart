@@ -11,6 +11,7 @@ import '../domain/entities/category.dart';
 import '../domain/entities/order.dart';
 import '../domain/entities/product.dart';
 import '../domain/entities/ticket.dart';
+import '../domain/entities/user_profile.dart';
 import '../data/datasources/mock_data_source.dart';
 
 /// Low-level Firestore access. Prefer the repositories in
@@ -29,6 +30,8 @@ class FirestoreService {
       _db.collection(AppConfig.ticketsCollection);
   CollectionReference<Map<String, dynamic>> get _categories =>
       _db.collection(AppConfig.categoriesCollection);
+  CollectionReference<Map<String, dynamic>> get _users =>
+      _db.collection(AppConfig.usersCollection);
 
   // ─── Products ─────────────────────────────────────────────────────
 
@@ -325,6 +328,24 @@ class FirestoreService {
 
   Future<void> updateTicketStatus(String id, String status) async {
     await _tickets.doc(id).update({'status': status});
+  }
+
+  // ─── Customer profile (wishlist, addresses, preferences) ──────────
+
+  /// Live `users/{uid}` document. The security rule for this collection
+  /// restricts reads and writes to the owning account.
+  Stream<UserProfile> userProfileStream(String uid) => _users
+      .doc(uid)
+      .snapshots()
+      .map((snap) => UserProfile.fromMap(snap.data()));
+
+  /// Merges [data] into the customer's profile document, leaving unrelated
+  /// fields (wishlist, addresses, preferences) untouched.
+  Future<void> mergeUserProfile(
+    String uid,
+    Map<String, dynamic> data,
+  ) async {
+    await _users.doc(uid).set(data, SetOptions(merge: true));
   }
 
   // ─── Seed ─────────────────────────────────────────────────────────

@@ -8,11 +8,18 @@ class ProductCard extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback? onAddToCart;
 
+  /// When provided, a heart is shown over the image. Null hides it, which keeps
+  /// the card usable in contexts without wishlist state (and in widget tests).
+  final bool? isWishlisted;
+  final VoidCallback? onToggleWishlist;
+
   const ProductCard({
     super.key,
     required this.product,
     required this.onTap,
     this.onAddToCart,
+    this.isWishlisted,
+    this.onToggleWishlist,
   });
 
   @override
@@ -52,6 +59,31 @@ class ProductCard extends StatelessWidget {
                         style: TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  if (isWishlisted != null)
+                    Positioned(
+                      top: 4,
+                      right: 4,
+                      child: Material(
+                        color: Colors.white.withValues(alpha: 0.9),
+                        shape: const CircleBorder(),
+                        child: InkWell(
+                          customBorder: const CircleBorder(),
+                          onTap: onToggleWishlist,
+                          child: Padding(
+                            padding: const EdgeInsets.all(6),
+                            child: Icon(
+                              isWishlisted!
+                                  ? Icons.favorite
+                                  : Icons.favorite_border,
+                              size: 20,
+                              color: isWishlisted!
+                                  ? Colors.red
+                                  : Colors.grey[700],
+                            ),
+                          ),
                         ),
                       ),
                     ),

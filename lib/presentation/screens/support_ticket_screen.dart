@@ -9,6 +9,7 @@ import '../../core/providers/repository_providers.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/validation/validators.dart';
 import '../../domain/entities/ticket.dart';
+import '../providers/user_profile_provider.dart';
 import '../../services/notification_service.dart';
 
 class SupportTicketScreen extends ConsumerStatefulWidget {
@@ -60,12 +61,14 @@ class _SupportTicketScreenState extends ConsumerState<SupportTicketScreen> {
       );
       AppLogger.info('Support ticket submitted', tag: 'support');
 
-      // Play a confirmation sound for the customer
-      await NotificationService.instance.showNotification(
-        title: '✅ Ticket Submitted!',
-        body:
-            'We got your message and will get back to you shortly.',
-      );
+      // Confirmation alert, honouring the customer's notification preference.
+      if (ref.read(userProfileValueProvider).notifications.supportReplies) {
+        await NotificationService.instance.showNotification(
+          title: '✅ Ticket Submitted!',
+          body:
+              'We got your message and will get back to you shortly.',
+        );
+      }
 
       if (mounted) setState(() => _submitted = true);
     } catch (e, st) {
