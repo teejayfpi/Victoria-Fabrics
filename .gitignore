@@ -76,6 +76,10 @@ functions/*.log
 !functions/package-lock.json
 !functions/tsconfig.json
 
+# Firestore rules test harness (keep its manifest; node_modules stays ignored)
+!firestore-rules-tests/package.json
+!firestore-rules-tests/package-lock.json
+
 # Never commit service-account keys or other credentials
 *-adminsdk-*.json
 *firebase-adminsdk*.json
