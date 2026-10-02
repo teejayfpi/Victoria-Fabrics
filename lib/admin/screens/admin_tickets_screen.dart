@@ -6,6 +6,7 @@ import '../../core/error/failures.dart';
 import '../../core/logging/app_logger.dart';
 import '../../core/providers/repository_providers.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/widgets/async_state.dart';
 import '../../domain/entities/ticket.dart';
 import '../providers/admin_auth_provider.dart';
 import '../providers/admin_data_providers.dart';
@@ -49,10 +50,10 @@ class _AdminTicketsScreenState extends ConsumerState<AdminTicketsScreen>
           ],
         ),
       ),
-      body: ticketsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Error: $e')),
-        data: (tickets) {
+      body: AsyncValueView<List<SupportTicket>>(
+        value: ticketsAsync,
+        onRetry: () => ref.invalidate(adminTicketsProvider),
+        builder: (context, tickets) {
           final open = tickets.where((t) => t.status == 'open').toList();
           final inProgress =
               tickets.where((t) => t.status == 'in_progress').toList();

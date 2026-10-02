@@ -10,6 +10,7 @@ import '../../core/error/failures.dart';
 import '../../core/logging/app_logger.dart';
 import '../../core/providers/repository_providers.dart';
 import '../../core/theme/app_theme.dart';
+import '../../presentation/widgets/product_image.dart';
 import '../../domain/entities/product.dart';
 import '../../domain/entities/category.dart';
 import '../../presentation/providers/category_provider.dart';
@@ -547,7 +548,7 @@ class _AdminAddProductScreenState extends ConsumerState<AdminAddProductScreen> {
           // Existing uploaded images
           ..._existingImageUrls.asMap().entries.map((entry) {
             return _ImageTile(
-              child: Image.network(entry.value, fit: BoxFit.cover),
+              child: ProductImage(imageUrl: entry.value),
               onRemove: () =>
                   setState(() => _existingImageUrls.removeAt(entry.key)),
             );

@@ -30,7 +30,8 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
 
     setState(() => _isLoading = true);
 
-    final result = await ref.read(adminAuthProvider.notifier).login(
+    final notifier = ref.read(adminAuthProvider.notifier);
+    final result = await notifier.login(
           _emailController.text.trim(),
           _passwordController.text,
         );
@@ -44,11 +45,16 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
       case AdminLoginResult.invalidCredentials:
         _showError('Incorrect email or password.');
       case AdminLoginResult.notAuthorised:
+        // Give the owner the exact UID to provision: this is almost always the
+        // missing step, and "not authorised" alone is not actionable.
         _showError(
-          'This account is not authorised for the admin portal.',
+          'This account is not authorised for the admin portal.'
+          '${notifier.lastUnauthorisedUid == null ? '' : '\n'
+              'Ask an existing admin to create admins/${notifier.lastUnauthorisedUid} '
+              'with role "admin" (see docs/admin-setup.md).'}',
         );
       case AdminLoginResult.failed:
-        _showError('Sign-in failed. Please try again.');
+        _showError('Sign-in failed. Check your connection and try again.');
     }
   }
 

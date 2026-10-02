@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import 'product_image.dart';
 import '../../domain/entities/category.dart';
 
 class CategoryCard extends StatelessWidget {
@@ -44,16 +44,9 @@ class CategoryCard extends StatelessWidget {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  CachedNetworkImage(
+                  ProductImage(
                     imageUrl: category.imageUrl,
-                    fit: BoxFit.cover,
-                    placeholder: (context, url) => Container(
-                      color: Colors.grey[200],
-                      child: const Center(
-                        child: CircularProgressIndicator(),
-                      ),
-                    ),
-                    errorWidget: (context, url, error) => Container(
+                    fallback: Container(
                       color: Colors.grey[200],
                       child: Icon(
                         _getIconData(category.iconName),

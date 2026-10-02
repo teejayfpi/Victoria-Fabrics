@@ -16,9 +16,22 @@ account against, in order:
 3. the `_bootstrapAdmins` email allow-list — **empty on purpose**.
 
 If none of these match, the account is signed back out and the portal reports
-"This account is not authorised". There is intentionally no self-registration:
-a password or allow-list compiled into the APK is recoverable by anyone who
-downloads it, so authorisation is always resolved server-side.
+"This account is not authorised", including the exact UID to provision. There is
+intentionally no self-registration: a password or allow-list compiled into the
+APK is recoverable by anyone who downloads it, so authorisation is always
+resolved server-side.
+
+### Known configuration issue: admin Android app registration
+
+`android/app/src/admin/google-services.json` currently reuses the **customer**
+`mobilesdk_app_id` (`1:1010144166475:android:27384e1b5bc8721b02c3ce`) while
+declaring the admin package name. The Android `google-services` plugin matches on
+package name, so the build and sign-in still work, but Firebase Analytics and App
+Check attribute admin traffic to the customer app. Register a separate Android
+app in the Firebase Console for `com.fabrichaven.fabric_haven_admin`, download its
+`google-services.json`, and drop it in at
+`android/app/src/admin/google-services.json`. `test/admin/providers/admin_auth_config_test.dart`
+guards the package/project invariants around this.
 
 ### Roles
 

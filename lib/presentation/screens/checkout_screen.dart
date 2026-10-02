@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/error/error_mapper.dart';
 import '../providers/cart_provider.dart';
 import '../providers/order_provider.dart';
 import '../providers/user_profile_provider.dart';
@@ -96,11 +97,11 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
       ref.read(cartProvider.notifier).clearCart();
       if (mounted) context.go('/order-confirmation');
-    } catch (e) {
+    } catch (e, st) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to place order. Please try again. ($e)'),
+            content: Text(ErrorMapper.map(e, st).message),
             backgroundColor: Colors.red,
           ),
         );

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import 'product_image.dart';
 import '../../domain/entities/cart_item.dart';
 import '../../core/theme/app_theme.dart';
 
@@ -27,23 +27,10 @@ class CartItemWidget extends StatelessWidget {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
-              child: CachedNetworkImage(
-                imageUrl: item.product.primaryImageUrl,
+              child: SizedBox(
                 width: 80,
                 height: 80,
-                fit: BoxFit.cover,
-                placeholder: (context, url) => Container(
-                  width: 80,
-                  height: 80,
-                  color: Colors.grey[200],
-                  child: const Center(child: CircularProgressIndicator()),
-                ),
-                errorWidget: (context, url, error) => Container(
-                  width: 80,
-                  height: 80,
-                  color: Colors.grey[200],
-                  child: const Icon(Icons.image_not_supported),
-                ),
+                child: ProductImage(imageUrl: item.product.primaryImageUrl),
               ),
             ),
             const SizedBox(width: 12),

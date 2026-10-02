@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/error/error_mapper.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/widgets/async_state.dart';
 import '../providers/admin_analytics_providers.dart';
 import '../providers/admin_data_providers.dart';
 
@@ -39,7 +41,16 @@ class AdminAnalyticsScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Analytics')),
-      body: asyncOrders.isLoading && summary.orderCount == 0
+      body: asyncOrders.hasError
+          ? AppErrorState(
+              title: 'Could not load analytics',
+              message: ErrorMapper.map(
+                asyncOrders.error!,
+                asyncOrders.stackTrace ?? StackTrace.current,
+              ).message,
+              onRetry: () => ref.invalidate(adminOrdersProvider),
+            )
+          : asyncOrders.isLoading && summary.orderCount == 0
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
               padding: const EdgeInsets.all(16),

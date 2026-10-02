@@ -7,6 +7,7 @@ import '../../core/error/failures.dart';
 import '../../core/logging/app_logger.dart';
 import '../../core/providers/repository_providers.dart';
 import '../../core/theme/app_theme.dart';
+import '../../presentation/widgets/product_image.dart';
 import '../../domain/entities/category.dart';
 import '../../presentation/providers/category_provider.dart';
 import '../../presentation/providers/product_provider.dart';
@@ -256,13 +257,10 @@ class _CategoryTile extends StatelessWidget {
             width: 60,
             height: 60,
             color: Colors.grey[200],
-            child: category.imageUrl.isEmpty
-                ? const Icon(Icons.image)
-                : Image.network(
-                    category.imageUrl,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => const Icon(Icons.image),
-                  ),
+            child: ProductImage(
+              imageUrl: category.imageUrl,
+              fallback: const Icon(Icons.image),
+            ),
           ),
         ),
         title: Text(

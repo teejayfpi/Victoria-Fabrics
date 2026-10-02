@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/error/error_mapper.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/relative_time.dart';
+import '../../core/widgets/async_state.dart';
 import '../../domain/entities/order.dart';
 import '../../domain/entities/ticket.dart';
+import '../../presentation/providers/product_provider.dart';
 import '../providers/admin_auth_provider.dart';
 import '../providers/admin_data_providers.dart';
 import '../providers/admin_notifications_provider.dart';
@@ -28,6 +31,12 @@ class AdminDashboardScreen extends ConsumerWidget {
     final adminState = ref.watch(adminAuthProvider);
     final admin = adminState.valueOrNull;
     final stats = ref.watch(adminStatsProvider);
+    // Distinguish "the store has no data" from "the read failed". Without this
+    // the tiles and the recent-orders list silently show zeros and an empty
+    // card, which reads as a broken dashboard.
+    final loadError = ref.watch(adminOrdersProvider).error ??
+        ref.watch(adminTicketsProvider).error ??
+        ref.watch(allProductsStreamProvider).error;
 
     return Scaffold(
       appBar: AppBar(
@@ -76,7 +85,18 @@ class AdminDashboardScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: SingleChildScrollView(
+      body: loadError != null
+          ? AppErrorState(
+              title: 'Could not load dashboard data',
+              message:
+                  ErrorMapper.map(loadError, StackTrace.current).message,
+              onRetry: () {
+                ref.invalidate(adminOrdersProvider);
+                ref.invalidate(adminTicketsProvider);
+                ref.invalidate(allProductsStreamProvider);
+              },
+            )
+          : SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

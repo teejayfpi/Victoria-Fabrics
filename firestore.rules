@@ -27,16 +27,28 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
 
+    // The `role` field of the caller's roster document, or null when there is
+    // no document. Reading the *value* (not just the document's existence)
+    // matters: a `viewer` roster entry must not be treated as staff, or a
+    // read-only account could edit the catalogue.
+    function adminDocRole() {
+      return hasAdminDoc()
+        ? get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role
+        : null;
+    }
+
     function isAdmin() {
       return isSignedIn()
         && (adminRole() in ['admin', 'superAdmin', 'super_admin']
-            || (adminRole() == null && hasAdminDoc()));
+            || (adminRole() == null
+                && adminDocRole() in ['admin', 'superAdmin', 'super_admin']));
     }
 
     function isStaff() {
       return isSignedIn()
         && (adminRole() in ['staff', 'admin', 'superAdmin', 'super_admin']
-            || ((adminRole() == null) && hasAdminDoc()));
+            || (adminRole() == null
+                && adminDocRole() in ['staff', 'admin', 'superAdmin', 'super_admin']));
     }
 
     // ─── Order integrity helpers ────────────────────────────────────────

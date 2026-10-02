@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/order_provider.dart';
 import '../../domain/entities/order.dart';
+import '../../core/error/error_mapper.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/widgets/async_state.dart';
 import 'package:intl/intl.dart';
 
 class OrdersScreen extends ConsumerWidget {
@@ -45,13 +47,23 @@ class OrdersScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final orders = ref.watch(orderProvider);
+    final ordersAsync = ref.watch(userOrdersStreamProvider);
+    final orders = ordersAsync.valueOrNull ?? const <Order>[];
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('My Orders'),
       ),
-      body: orders.isEmpty
+      body: ordersAsync.hasError && orders.isEmpty
+          ? AppErrorState(
+              title: 'Could not load your orders',
+              message: ErrorMapper.map(
+                ordersAsync.error!,
+                ordersAsync.stackTrace ?? StackTrace.current,
+              ).message,
+              onRetry: () => ref.invalidate(userOrdersStreamProvider),
+            )
+          : orders.isEmpty
           ? Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,

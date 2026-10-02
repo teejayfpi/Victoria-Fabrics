@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../providers/product_provider.dart';
 import '../providers/user_profile_provider.dart';
 import '../widgets/product_card.dart';
+import '../widgets/cart_actions.dart';
 
 class SearchScreen extends ConsumerStatefulWidget {
   const SearchScreen({super.key});
@@ -129,6 +130,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                         onToggleWishlist: () => ref
                             .read(userDataControllerProvider)
                             .toggleWishlist(product.id),
+                        onAddToCart: () => quickAddToCart(context, ref, product),
                       );
                     },
                   ),

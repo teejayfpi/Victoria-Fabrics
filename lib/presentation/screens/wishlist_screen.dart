@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/error/error_mapper.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/widgets/async_state.dart';
 import '../providers/user_profile_provider.dart';
 import '../providers/product_provider.dart';
 import '../widgets/product_card.dart';
@@ -15,7 +17,10 @@ class WishlistScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final ids = ref.watch(wishlistIdsProvider);
-    final products = ref.watch(allProductsProvider);
+    final productsAsync = ref.watch(allProductsStreamProvider);
+    final profileAsync = ref.watch(userProfileProvider);
+    final products = productsAsync.valueOrNull ?? const [];
+    final loadError = productsAsync.error ?? profileAsync.error;
 
     // Resolve saved ids against the live catalogue; ids whose product has been
     // removed from the store are dropped rather than shown as broken tiles.
@@ -26,7 +31,16 @@ class WishlistScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Wishlist')),
-      body: saved.isEmpty
+      body: loadError != null
+          ? AppErrorState(
+              title: 'Could not load your wishlist',
+              message: ErrorMapper.map(loadError, StackTrace.current).message,
+              onRetry: () {
+                ref.invalidate(allProductsStreamProvider);
+                ref.invalidate(userProfileProvider);
+              },
+            )
+          : saved.isEmpty
           ? _EmptyWishlist(hasSavedIds: ids.isNotEmpty)
           : GridView.builder(
               padding: const EdgeInsets.all(16),

@@ -6,6 +6,8 @@ import '../../core/error/failures.dart';
 import '../../core/logging/app_logger.dart';
 import '../../core/providers/repository_providers.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/widgets/async_state.dart';
+import '../../presentation/widgets/product_image.dart';
 import '../../domain/entities/category.dart';
 import '../../domain/entities/product.dart';
 import '../../presentation/providers/category_provider.dart';
@@ -40,11 +42,10 @@ class _AdminProductsScreenState
           ),
         ],
       ),
-      body: productsAsync.when(
-        loading: () =>
-            const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Error: $e')),
-        data: (products) {
+      body: AsyncValueView<List<Product>>(
+        value: productsAsync,
+        onRetry: () => ref.invalidate(allProductsStreamProvider),
+        builder: (context, products) {
           var filtered = products;
           if (_selectedCategory != null) {
             filtered = filtered
@@ -261,14 +262,12 @@ class _ProductCard extends StatelessWidget {
                 width: 80,
                 height: 80,
                 color: Colors.grey[200],
-                child: product.imageUrls.isNotEmpty
-                    ? Image.network(
-                        product.imageUrls.first,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) =>
-                            const Icon(Icons.image, color: Colors.grey),
-                      )
-                    : const Icon(Icons.image, color: Colors.grey),
+                child: ProductImage(
+                  imageUrl: product.imageUrls.isNotEmpty
+                      ? product.imageUrls.first
+                      : '',
+                  fallback: const Icon(Icons.image, color: Colors.grey),
+                ),
               ),
             ),
             const SizedBox(width: 12),

@@ -5,6 +5,7 @@ import '../providers/category_provider.dart';
 import '../providers/product_provider.dart';
 import '../providers/user_profile_provider.dart';
 import '../widgets/product_card.dart';
+import '../widgets/cart_actions.dart';
 
 class CategoryProductsScreen extends ConsumerWidget {
   final String categoryId;
@@ -51,6 +52,7 @@ class CategoryProductsScreen extends ConsumerWidget {
                   isWishlisted: ref.watch(isWishlistedProvider(product.id)),
                   onToggleWishlist: () =>
                       ref.read(userDataControllerProvider).toggleWishlist(product.id),
+                  onAddToCart: () => quickAddToCart(context, ref, product),
                 );
               },
             ),

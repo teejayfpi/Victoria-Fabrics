@@ -4,9 +4,12 @@ import 'package:go_router/go_router.dart';
 import '../providers/category_provider.dart';
 import '../providers/product_provider.dart';
 import '../providers/user_profile_provider.dart';
-import '../widgets/product_card.dart';
+import '../widgets/cart_actions.dart';
 import '../widgets/category_card.dart';
+import '../widgets/product_card.dart';
+import '../../core/error/error_mapper.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/widgets/async_state.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -33,8 +36,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final categories = ref.watch(categoriesProvider);
-    final featuredProducts = ref.watch(featuredProductsProvider);
+    final categoriesAsync = ref.watch(categoriesStreamProvider);
+    final productsAsync = ref.watch(allProductsStreamProvider);
+    final categories = categoriesAsync.valueOrNull ?? const [];
+    final featuredProducts = (productsAsync.valueOrNull ?? const [])
+        .where((p) => p.inStock)
+        .take(6)
+        .toList();
+
+    // If the catalogue cannot be read, say so once rather than showing two
+    // empty shelves. A silent failure here is indistinguishable from a store
+    // that genuinely has no products.
+    final catalogError = productsAsync.error ?? categoriesAsync.error;
 
     return Scaffold(
       appBar: AppBar(
@@ -46,7 +59,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
+      body: catalogError != null
+          ? AppErrorState(
+              title: 'Could not load the catalogue',
+              message: ErrorMapper.map(catalogError, StackTrace.current).message,
+              onRetry: () {
+                ref.invalidate(categoriesStreamProvider);
+                ref.invalidate(allProductsStreamProvider);
+              },
+            )
+          : SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -150,18 +172,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   isWishlisted: ref.watch(isWishlistedProvider(product.id)),
                   onToggleWishlist: () =>
                       ref.read(userDataControllerProvider).toggleWishlist(product.id),
-                  onAddToCart: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('${product.name} added to cart'),
-                        duration: const Duration(seconds: 2),
-                        action: SnackBarAction(
-                          label: 'View Cart',
-                          onPressed: () => context.go('/cart'),
-                        ),
-                      ),
-                    );
-                  },
+                  onAddToCart: () => quickAddToCart(context, ref, product),
                 );
               },
             ),

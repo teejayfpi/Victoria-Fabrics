@@ -85,11 +85,19 @@ class AdminAuthNotifier extends StateNotifier<AsyncValue<AdminUser?>> {
   final FirebaseAuth _auth;
   final FirebaseFirestore _firestore;
 
+  /// UID of the account from the most recent `notAuthorised` sign-in attempt.
+  ///
+  /// The login screen surfaces this so the owner can provision the matching
+  /// `admins/{uid}` document without digging through logs — an unprovisioned
+  /// account is the most common reason the portal "does nothing".
+  String? lastUnauthorisedUid;
+
   /// Admin emails allowed to sign in even before a role document exists.
   /// Each entry is a custom claim or a seeded Firestore role in production.
   static const Set<String> _bootstrapAdmins = {};
 
   Future<AdminLoginResult> login(String email, String password) async {
+    lastUnauthorisedUid = null;
     state = const AsyncValue.loading();
     try {
       final credential = await _auth.signInWithEmailAndPassword(
@@ -106,6 +114,7 @@ class AdminAuthNotifier extends StateNotifier<AsyncValue<AdminUser?>> {
       if (admin == null) {
         // Authenticated, but not an administrator: sign back out so the
         // customer app's session is not left in a half-privileged state.
+        lastUnauthorisedUid = user.uid;
         await _auth.signOut();
         state = const AsyncValue.data(null);
         return AdminLoginResult.notAuthorised;

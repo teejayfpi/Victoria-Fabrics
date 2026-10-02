@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/product_provider.dart';
+import '../widgets/product_image.dart';
 import '../providers/cart_provider.dart';
 import '../providers/user_profile_provider.dart';
 import '../../core/theme/app_theme.dart';
@@ -92,18 +92,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                   setState(() => _currentImageIndex = index);
                 },
                 itemBuilder: (context, index) {
-                  return CachedNetworkImage(
-                    imageUrl: product.imageUrls[index],
-                    fit: BoxFit.cover,
-                    placeholder: (context, url) => Container(
-                      color: Colors.grey[200],
-                      child: const Center(child: CircularProgressIndicator()),
-                    ),
-                    errorWidget: (context, url, error) => Container(
-                      color: Colors.grey[200],
-                      child: const Icon(Icons.image_not_supported, size: 50),
-                    ),
-                  );
+                  return ProductImage(imageUrl: product.imageUrls[index]);
                 },
               ),
             ),
