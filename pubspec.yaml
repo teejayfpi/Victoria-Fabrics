@@ -50,7 +50,7 @@ dependencies:
   cloud_firestore: ^6.10.0
   cloud_functions: ^6.5.0
   firebase_storage: ^13.6.0
-  google_sign_in: ^6.2.1
+  google_sign_in: ^7.2.0
 
   # Media
   image_picker: ^1.2.3
