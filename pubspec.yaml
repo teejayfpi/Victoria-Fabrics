@@ -41,7 +41,7 @@ dependencies:
   cached_network_image: ^3.3.1
   # Used for the inline-image fallback when Firebase Storage is unavailable.
   image: ^4.1.7
-  intl: ^0.19.0
+  intl: ^0.20.3
   uuid: ^4.6.0
 
   # Firebase
